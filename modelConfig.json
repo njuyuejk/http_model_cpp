@@ -1,0 +1,27 @@
+{
+  "general": {
+    "logToFile": false,
+    "logFilePath": "./logs",
+    "logLevel": 1,
+    "http_server": {
+      "host": "127.0.0.1",
+      "port": 9000,
+      "connection_timeout": 5,
+      "read_timeout": 5
+    }
+  },
+  "model": [
+    {
+      "name": "person",
+      "model_path": "./model/person_yolo.rknn",
+      "model_type": 1,
+      "objectThresh": 0.15
+    },
+    {
+      "name": "uav",
+      "model_path": "./model/uav_yolo.rknn",
+      "model_type": 5,
+      "objectThresh": 0.5
+    }
+  ]
+}
