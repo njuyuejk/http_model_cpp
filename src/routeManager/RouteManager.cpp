@@ -48,9 +48,22 @@ void RouteManager::configureRoutes(HttpServer& server) {
     Logger::get_instance().info("正在配置所有路由组...");
 
     for (const auto& group : routeGroups) {
-        Logger::get_instance().info("正在配置路由组: " + group->getName());
-        group->registerRoutes(server);
+        ExceptionHandler::execute("配置路由组: " + group->getName(), [&]() {
+            Logger::get_instance().info("正在配置路由组: " + group->getName());
+            group->registerRoutes(server);
+        });
     }
+
+    // 添加全局异常处理器
+    server.setExceptionHandler([](const httplib::Request& req, httplib::Response& res, std::exception_ptr ep) {
+        try {
+            if (ep) {
+                std::rethrow_exception(ep);
+            }
+        } catch (const std::exception& e) {
+            ExceptionHandler::setErrorResponse(res, e, &req);
+        }
+    });
 
     Logger::get_instance().info("所有路由配置完成");
 }

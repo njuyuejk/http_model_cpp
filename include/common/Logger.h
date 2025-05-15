@@ -11,15 +11,19 @@
 #include <dirent.h>
 #include <atomic>
 
+#ifdef ERROR
+#undef ERROR
+#endif
+
 /**
  * @brief 日志级别枚举
  */
 enum LogLevel {
-    DEBUG,  // 调试信息 (0)
-    INFO,   // 一般信息 (1)
-    WARNING,// 警告信息 (2)
-    ERROR,  // 错误信息 (3)
-    FATAL   // 致命错误 (4)
+    DEBUG,
+    INFO,
+    WARNING,
+    ERROR,
+    FATAL
 };
 
 /**

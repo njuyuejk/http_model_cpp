@@ -90,7 +90,7 @@ bool HttpServer::start() {
 
     // 设置超时（如果配置有指定）
     if (config.connectionTimeout > 0) {
-        server.set_connection_timeout(config.connectionTimeout);
+        server.set_keep_alive_timeout(config.connectionTimeout);
     }
 
     if (config.readTimeout > 0) {

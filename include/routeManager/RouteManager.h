@@ -7,6 +7,7 @@
 
 #include "HttpServer.h"
 #include "common/Logger.h"
+#include "exception/GlobalExceptionHandler.h"
 #include <string>
 #include <functional>
 #include <unordered_map>
