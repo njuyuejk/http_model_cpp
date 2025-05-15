@@ -7,112 +7,33 @@
 #include "nlohmann/json.hpp"  // 直接包含整个json.hpp
 
 /**
- * @brief 流处理配置结构体
- * 包含输入输出流的各种参数配置
+ * @brief 模型配置结构体
+ * 包含模型的各种参数配置
  */
-struct StreamConfig {
-    // 配置ID
-    std::string id;
+struct ModelConfig {
+    // 模型名称
+    std::string name;
 
-    // 输入配置
-    std::string inputUrl;
+    // 模型路径
+    std::string model_path;
 
-    // 输出配置
-    std::string outputUrl;
-    std::string outputFormat;
-    bool pushEnabled = true;
-    bool aiEnabled = false;
-    bool isLocalFile = false;
+    // 模型类型
+    int model_type = 1;
 
-    int modelType = 1;
-
-    // 编码配置
-    std::string videoCodec;
-    std::string audioCodec;
-    int videoBitrate = 2000000;  // 2Mbps默认值
-    int audioBitrate = 128000;   // 128kbps默认值
-
-    // 延迟优化配置
-    bool lowLatencyMode = true;
-    int keyframeInterval = 30;
-    int bufferSize = 1000000;    // 1MB默认缓冲区
-
-    // 硬件加速配置
-    bool enableHardwareAccel = true;
-    std::string hwaccelType;     // 例如 "cuda", "qsv", "vaapi"等
-
-    // 分辨率设置（若需要转码）
-    int width = 0;               // 0表示保持原始分辨率
-    int height = 0;
-
-    // 其他高级设置
-    std::map<std::string, std::string> extraOptions;
-
-    /**
-     * @brief 创建默认配置
-     * @return 默认配置实例
-     */
-    static StreamConfig createDefault();
+    // 对象检测阈值
+    float objectThresh = 0.5;
 
     /**
      * @brief 从JSON创建配置
      * @param j JSON对象
      * @return 配置实例
      */
-    static StreamConfig fromJson(const nlohmann::json& j);
+    static ModelConfig fromJson(const nlohmann::json& j);
 
     /**
      * @brief 将配置转换为JSON
      * @return JSON对象
      */
-    nlohmann::json toJson() const;
-
-    /**
-     * @brief 验证配置有效性
-     * @return 配置是否有效
-     */
-    bool validate() const;
-
-    /**
-     * @brief 将配置转换为字符串
-     * @return 配置的字符串表示（JSON格式）
-     */
-    std::string toString() const;
-};
-
-/**
- * @brief MQTT 订阅配置
- */
-struct MQTTSubscriptionConfig {
-    std::string topic;
-    int qos;
-    std::string handlerId;
-
-    MQTTSubscriptionConfig() : qos(0) {}
-
-    static MQTTSubscriptionConfig fromJson(const nlohmann::json& j);
-    nlohmann::json toJson() const;
-};
-
-/**
- * @brief MQTT 服务器配置
- */
-struct MQTTServerConfig {
-    std::string name;
-    std::string brokerUrl;
-    std::string clientId;
-    std::string username;
-    std::string password;
-    bool cleanSession;
-    int keepAliveInterval;
-    std::vector<MQTTSubscriptionConfig> subscriptions;
-    bool autoReconnect;
-    int reconnectInterval;
-
-    MQTTServerConfig() : cleanSession(true), keepAliveInterval(60),
-                         autoReconnect(true), reconnectInterval(5) {}
-
-    static MQTTServerConfig fromJson(const nlohmann::json& j);
     nlohmann::json toJson() const;
 };
 
@@ -123,14 +44,14 @@ struct HTTPServerConfig {
     std::string host;
     int port;
     int connectionTimeout;
+    int readTimeout;
 
     HTTPServerConfig() : host("127.0.0.1"), port(9000),
-                         connectionTimeout(5) {}
+                         connectionTimeout(5), readTimeout(5) {}
 
     static HTTPServerConfig fromJson(const nlohmann::json& j);
     nlohmann::json toJson() const;
 };
-
 
 /**
  * @brief 应用配置类
@@ -170,66 +91,58 @@ public:
     static const std::map<std::string, std::string>& getExtraOptions();
 
     /**
-     * @brief 获取看门狗配置
+     * @brief 获取目录路径
      */
-    static bool getUseWatchdog();
-    static int getWatchdogInterval();
     static std::string getDirPath();
 
     /**
-     * @brief 获取全部流配置
+     * @brief 获取HTTP服务器配置
+     * @return HTTP服务器配置
      */
-    static const std::vector<StreamConfig>& getStreamConfigs();
+    static const HTTPServerConfig& getHTTPServerConfig();
 
     /**
-     * @brief 添加流配置
-     * @param config 要添加的配置
+     * @brief 获取全部模型配置
+     * @return 模型配置列表
      */
-    static void addStreamConfig(const StreamConfig& config);
+    static const std::vector<ModelConfig>& getModelConfigs();
 
     /**
-     * @brief 通过ID查找流配置
-     * @param id 配置ID
+     * @brief 通过名称查找模型配置
+     * @param name 模型名称
      * @return 找到的配置，如果未找到则返回默认配置
      */
-    static StreamConfig findStreamConfigById(const std::string& id);
+    static ModelConfig findModelConfigByName(const std::string& name);
 
     /**
-     * @brief 更新流配置
+     * @brief 添加模型配置
+     * @param config 要添加的配置
+     */
+    static void addModelConfig(const ModelConfig& config);
+
+    /**
+     * @brief 更新模型配置
      * @param config 新配置
      * @return 更新成功返回true
      */
-    static bool updateStreamConfig(const StreamConfig& config);
+    static bool updateModelConfig(const ModelConfig& config);
 
     /**
-     * @brief 删除流配置
-     * @param id 配置ID
+     * @brief 删除模型配置
+     * @param name 模型名称
      * @return 删除成功返回true
      */
-    static bool removeStreamConfig(const std::string& id);
-
-    static const std::vector<MQTTServerConfig>& getMQTTServers(); // 获取所有MQTT服务器配置
-
-    /**
- * @brief 获取HTTP服务器配置
- * @return HTTP服务器配置
- */
-    static const HTTPServerConfig& getHTTPServerConfig();
+    static bool removeModelConfig(const std::string& name);
 
 private:
-    static std::vector<StreamConfig> streamConfigs;
     static bool logToFile;
     static std::string logFilePath;
     static int logLevel;
     static int threadPoolSize;
     static std::map<std::string, std::string> extraOptions;
-    static bool useWatchdog;
-    static int watchdogInterval;
-
     static std::string dirPath;
-
-    static std::vector<MQTTServerConfig> mqttServers; // MQTT服务器配置列表
-    static HTTPServerConfig httpServerConfig; // HTTP服务器配置
+    static HTTPServerConfig httpServerConfig;
+    static std::vector<ModelConfig> modelConfigs;
 };
 
 #endif // STREAM_CONFIG_H
