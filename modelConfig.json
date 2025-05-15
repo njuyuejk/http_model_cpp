@@ -4,8 +4,8 @@
     "logFilePath": "./logs",
     "logLevel": 1,
     "http_server": {
-      "host": "127.0.0.1",
-      "port": 9000,
+      "host": "0.0.0.0",
+      "port": 8888,
       "connection_timeout": 5,
       "read_timeout": 5
     }
