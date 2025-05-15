@@ -5,11 +5,55 @@ set(CMAKE_CXX_STANDARD 17)
 
 include_directories(include)
 
+# 设置 opencv 的根目录
+set(OPENCV_ROOT "D:/AI/opencv/build/install")
+
+# 添加包含目录
+include_directories("${OPENCV_ROOT}/include")
+
+# 设置库目录
+link_directories("${OPENCV_ROOT}/x64/mingw/lib")
+
+# 要链接的 FFmpeg 库
+set(OPENCV_LIBS
+        opencv_world470
+        opencv_img_hash470
+)
+
+
+# 查找 FFmpeg 库
+foreach(lib ${OPENCV_LIBS})
+    find_library(${lib}_LIBRARY NAMES ${lib} PATHS "${OPENCV_ROOT}/x64/mingw/lib")
+    if(NOT ${lib}_LIBRARY)
+        message(FATAL_ERROR "FFmpeg library ${lib} not found in ${OPENCV_ROOT}/x64/mingw/lib")
+    endif()
+    list(APPEND FOUND_OPENCV_LIBS ${${lib}_LIBRARY})
+endforeach()
+
+
+# rknn api
+#set(RKNN_API_PATH ${CMAKE_SOURCE_DIR}/RKNN/RK3588/${CMAKE_SYSTEM_NAME}/librknn_api)
+set(RKNN_API_PATH ${CMAKE_SOURCE_DIR}/RKNN/RK3588/Linux/librknn_api)
+set(LIB_ARCH aarch64)
+set(RKNN_RT_LIB "${CMAKE_SOURCE_DIR}/RKNN/RK3588/Linux/librknn_api/aarch64/librknnrt.so")
+include_directories("${RKNN_API_PATH}/include")
+include_directories("${CMAKE_SOURCE_DIR}/include/3rdparty")
+
+#rga
+set(RGA_PATH ${CMAKE_SOURCE_DIR}/include/3rdparty/rga/RK3588)
+set(LIB_ARCH aarch64)
+set(RGA_LIB ${RGA_PATH}/lib/Linux/${LIB_ARCH}/librga.so)
+include_directories( ${RGA_PATH}/include)
+set(CMAKE_INSTALL_RPATH "lib")
+
+
 set(common
         include/common/StreamConfig.h
         include/common/Logger.h
         src/common/Logger.cpp
         src/common/StreamConfig.cpp
+        include/common/base64.h
+        src/common/base64.cpp
 )
 
 set(app
@@ -44,6 +88,30 @@ set(exception
 
 )
 
+set(ai_service
+        include/AIService/postprocess.h
+        include/AIService/rknnPool.h
+        src/AIService/postprocess.cpp
+        src/AIService/rknnPool.cpp
+        include/AIService/preprocess.h
+        src/AIService/preprocess.cpp
+        include/AIService/lprnetPostprocess.h
+        src/AIService/lprnetPostprocess.cpp
+        src/AIService/lprnetPool.cpp
+        include/AIService/lprnetPool.h
+        include/AIService/lprnetPool.h
+        src/AIService/postprocess_p2.cpp
+        include/AIService/postprocess_p2.h
+        include/AIService/postprocess_pose.h
+        src/AIService/postprocess_pose.cpp
+        include/AIService/rknnPool_Pose.h
+        src/AIService/rknnPool_Pose.cpp
+        include/AIService/postprocess_seg.h
+        src/AIService/postprocess_seg.cpp
+        include/AIService/rknnPool_Seg.h
+        src/AIService/rknnPool_Seg.cpp
+)
+
 # 所有库源文件
 set(LIB_SOURCES
         ${handlers}
@@ -51,19 +119,23 @@ set(LIB_SOURCES
         ${app}
         ${route}
         ${exception}
+        ${ai_service}
 )
 
 # 创建静态库 (可根据需要改为 SHARED 库)
-add_library(58ai_processor SHARED ${LIB_SOURCES})
+add_library(58ai_http_processor SHARED ${LIB_SOURCES})
 
 # 为库设置属性
-set_target_properties(58ai_processor PROPERTIES
+set_target_properties(58ai_http_processor PROPERTIES
         VERSION 1.0.0
         SOVERSION 1
 )
 
 # 链接库依赖
-target_link_libraries(58ai_processor PRIVATE
+target_link_libraries(58ai_http_processor PRIVATE
+        ${OpenCV_LIBS}
+        ${RKNN_RT_LIB}
+        ${RGA_LIB}
         ws2_32
         pthread
 )
@@ -74,5 +146,5 @@ add_executable(http_model main.cpp
 
 #add_library(DynLibName STATIC src/handlers/api_handler.cpp) # Output dynamic library.
 
-target_link_libraries(http_model PRIVATE 58ai_processor ws2_32 pthread)
+target_link_libraries(http_model PRIVATE 58ai_http_processor ${OpenCV_LIBS} ${RKNN_RT_LIB} ${RGA_LIB} ws2_32 pthread)
 #target_link_libraries(http_model PRIVATE ws2_32 pthread)

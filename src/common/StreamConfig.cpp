@@ -83,7 +83,7 @@ bool AppConfig::loadFromFile(const std::string& configFilePath) {
             // 加载HTTP服务器配置
             if (general.contains("http_server") && general["http_server"].is_object()) {
                 httpServerConfig = HTTPServerConfig::fromJson(general["http_server"]);
-                Logger::info("加载HTTP服务器配置: " + httpServerConfig.host + ":" +
+                Logger::info("Loading HTTP server configuration: " + httpServerConfig.host + ":" +
                              std::to_string(httpServerConfig.port));
             }
         }
@@ -94,7 +94,7 @@ bool AppConfig::loadFromFile(const std::string& configFilePath) {
                 ModelConfig config = ModelConfig::fromJson(modelJson);
                 if (!config.name.empty()) {
                     modelConfigs.push_back(config);
-                    Logger::info("加载模型配置: " + config.name);
+                    Logger::info("Loading model configuration: " + config.name);
                 }
             }
         }
@@ -102,11 +102,11 @@ bool AppConfig::loadFromFile(const std::string& configFilePath) {
         return true;
     }
     catch (const json::exception& e) {
-        Logger::error("JSON解析错误: " + std::string(e.what()));
+        Logger::error("JSON parsing error: " + std::string(e.what()));
         return false;
     }
     catch (const std::exception& e) {
-        Logger::error("加载配置文件错误: " + std::string(e.what()));
+        Logger::error("Error loading configuration file: " + std::string(e.what()));
         return false;
     }
 }
@@ -170,11 +170,11 @@ bool AppConfig::saveToFile(const std::string& configFilePath) {
         return true;
     }
     catch (const json::exception& e) {
-        Logger::error("JSON错误，保存配置时: " + std::string(e.what()));
+        Logger::error("JSON error when saving configuration: " + std::string(e.what()));
         return false;
     }
     catch (const std::exception& e) {
-        Logger::error("保存配置文件错误: " + std::string(e.what()));
+        Logger::error("Error saving configuration file: " + std::string(e.what()));
         return false;
     }
 }

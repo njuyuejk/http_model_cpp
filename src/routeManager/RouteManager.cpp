@@ -19,20 +19,20 @@ RouteManager& RouteManager::getInstance() {
 
 bool RouteManager::addGroup(std::shared_ptr<RouteGroup> group) {
     if (!group) {
-        Logger::get_instance().warning("尝试添加空的路由组");
+        Logger::get_instance().warning("Attempt to add empty route group");
         return false;
     }
 
     const auto& name = group->getName();
     if (groupIndex.find(name) != groupIndex.end()) {
-        Logger::get_instance().warning("路由组已存在: " + name);
+        Logger::get_instance().warning("Route group already exists: " + name);
         return false;
     }
 
     routeGroups.push_back(group);
     groupIndex[name] = group;
 
-    Logger::get_instance().info("添加路由组: " + name + ", 基础路径: " + group->getBasePath());
+    Logger::get_instance().info("Added route group: " + name + ", base path: " + group->getBasePath());
     return true;
 }
 
@@ -45,11 +45,11 @@ std::shared_ptr<RouteGroup> RouteManager::getGroup(const std::string& name) cons
 }
 
 void RouteManager::configureRoutes(HttpServer& server) {
-    Logger::get_instance().info("正在配置所有路由组...");
+    Logger::get_instance().info("Configuring all route groups...");
 
     for (const auto& group : routeGroups) {
-        ExceptionHandler::execute("配置路由组: " + group->getName(), [&]() {
-            Logger::get_instance().info("正在配置路由组: " + group->getName());
+        ExceptionHandler::execute("Configuring route group: " + group->getName(), [&]() {
+            Logger::get_instance().info("Configuring route group: " + group->getName());
             group->registerRoutes(server);
         });
     }
@@ -65,5 +65,5 @@ void RouteManager::configureRoutes(HttpServer& server) {
         }
     });
 
-    Logger::get_instance().info("所有路由配置完成");
+    Logger::get_instance().info("All route configurations completed");
 }

@@ -41,13 +41,13 @@ public:
                 }
             } catch (const std::exception& e) {
                 json error_json = {
-                        {"error", "服务器内部错误"},
+                        {"error", "Internal Server Error"},
                         {"message", e.what()},
                         {"path", req.path}
                 };
                 res.status = 500;
                 res.set_content(error_json.dump(), "application/json");
-                Logger::get_instance().error("服务器异常: " + std::string(e.what()) + " 路径: " + req.path);
+                Logger::get_instance().error("Server exception: " + std::string(e.what()) + " path: " + req.path);
             }
         });
     }

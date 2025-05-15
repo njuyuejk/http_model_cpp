@@ -31,7 +31,7 @@ ApplicationManager& ApplicationManager::getInstance() {
 
 bool ApplicationManager::initialize(const std::string& configPath) {
     if (initialized) {
-        Logger::get_instance().warning("应用程序管理器已经初始化");
+        Logger::get_instance().warning("Application manager already initialized");
         return true;
     }
 
@@ -40,7 +40,7 @@ bool ApplicationManager::initialize(const std::string& configPath) {
     // 先初始化日志系统，使用默认值
     Logger::init();
 
-    Logger::get_instance().info("应用程序管理器正在初始化...");
+    Logger::get_instance().info("Initializing application manager...");
 
     // 使用异常处理加载配置
     bool config_loaded = ExceptionHandler::execute("加载配置文件", [&]() {
@@ -50,14 +50,14 @@ bool ApplicationManager::initialize(const std::string& configPath) {
     });
 
     if (!config_loaded) {
-        Logger::get_instance().error("配置加载失败，使用默认配置");
+        Logger::get_instance().error("Configuration loading failed, using default configuration");
         // 可以在这里设置默认配置值
     } else {
-        Logger::get_instance().info("配置加载成功");
+        Logger::get_instance().info("Configuration loaded successfully");
     }
 
     // 使用加载的设置或默认值重新初始化日志系统
-    ExceptionHandler::execute("初始化日志系统", [&]() {
+    ExceptionHandler::execute("Initializ Log systerm", [&]() {
         Logger::init(
                 AppConfig::getLogToFile(),
                 AppConfig::getLogFilePath(),
@@ -69,7 +69,7 @@ bool ApplicationManager::initialize(const std::string& configPath) {
     // initializeModels();
 
     initialized = true;
-    Logger::get_instance().info("应用程序管理器初始化成功");
+    Logger::get_instance().info("Application manager initialized successfully");
     return true;
 }
 
@@ -78,7 +78,7 @@ void ApplicationManager::shutdown() {
         return;
     }
 
-    Logger::get_instance().info("应用程序管理器正在关闭...");
+    Logger::get_instance().info("Shutting down application manager...");
 
     // 添加资源清理代码
 
@@ -93,13 +93,13 @@ const HTTPServerConfig& ApplicationManager::getHTTPServerConfig() const {
 }
 
 bool ApplicationManager::initializeModels() {
-    Logger::get_instance().info("开始初始化模型...");
+    Logger::get_instance().info("Starting model initialization...");
 
     // 获取所有模型配置
     const auto& modelConfigs = AppConfig::getModelConfigs();
 
     if (modelConfigs.empty()) {
-        Logger::get_instance().warning("没有找到模型配置");
+        Logger::get_instance().warning("No model configuration found");
         return true; // 没有模型也不是错误
     }
 
@@ -110,66 +110,60 @@ bool ApplicationManager::initializeModels() {
         bool model_initialized = ExceptionHandler::execute(
                 "初始化模型: " + config.name,
                 [&]() {
-                    Logger::get_instance().info("正在初始化模型: " + config.name);
+                    Logger::get_instance().info("Initializing model: " + config.name);
 
                     // 验证模型路径
                     if (config.model_path.empty()) {
-                        throw ModelException("模型路径为空", config.name);
+                        throw ModelException("Model path is empty", config.name);
                     }
 
                     // 检查模型文件是否存在
                     std::ifstream modelFile(config.model_path);
                     if (!modelFile.good()) {
-                        throw ModelException("模型文件不存在或无法访问: " + config.model_path, config.name);
+                        throw ModelException("Model file does not exist or cannot be accessed: " + config.model_path, config.name);
                     }
 
                     // 验证模型类型
                     if (config.model_type <= 0) {
-                        throw ModelException("无效的模型类型: " + std::to_string(config.model_type), config.name);
+                        throw ModelException("Invalid model type: " + std::to_string(config.model_type), config.name);
                     }
 
                     // 验证阈值范围
                     if (config.objectThresh < 0.0 || config.objectThresh > 1.0) {
                         throw ModelException(
-                                "无效的对象检测阈值: " + std::to_string(config.objectThresh) +
-                                "，阈值必须在0.0到1.0之间",
+                                "Invalid object detection threshold: " + std::to_string(config.objectThresh) +
+                                ", threshold must be between 0.0 and 1.0",
                                 config.name
                         );
                     }
 
-                    // 这里是模型初始化的实际逻辑，根据模型类型进行不同的初始化
-                    switch (config.model_type) {
-                        case 1: // 例如：YOLO模型
-                            Logger::get_instance().info("正在初始化YOLO模型: " + config.name);
-                            // 这里是YOLO模型初始化代码
-                            // 可能包括: 加载权重、配置GPU资源、设置检测参数等
-                            break;
+                    std::unique_ptr<rknn_lite> rknn_ptr = std::make_unique<rknn_lite>(const_cast<char *>(config.model_path.c_str()),config.model_type % 3,
+                                                                                      config.model_type, config.objectThresh);
+                    std::unique_ptr<SingleModelEntry> aiPool = std::make_unique<SingleModelEntry>();
 
-                        case 5: // 例如：UAV检测模型
-                            Logger::get_instance().info("正在初始化UAV检测模型: " + config.name);
-                            // 这里是UAV模型初始化代码
-                            break;
+                    aiPool->modelType = config.model_type;
+                    aiPool->modelName = config.name;
+                    aiPool->singleRKModel = std::move(rknn_ptr);
+                    aiPool->isEnabled = false;
 
-                        default:
-                            throw ModelException("未知的模型类型: " + std::to_string(config.model_type), config.name);
-                    }
+                    singleModelPools_.emplace_back(std::move(aiPool));
 
                     // 添加初始化完成的日志
-                    Logger::get_instance().info("模型初始化成功: " + config.name);
+                    Logger::get_instance().info("Model initialized successfully: " + config.name);
                 }
         );
 
         // 如果某个模型初始化失败，记录但继续初始化其他模型
         if (!model_initialized) {
             all_success = false;
-            Logger::get_instance().error("模型初始化失败: " + config.name + "，将继续初始化其他模型");
+            Logger::get_instance().error("Model initialization failed: " + config.name + ", continuing to initialize other models");
         }
     }
 
     if (all_success) {
-        Logger::get_instance().info("所有模型初始化成功");
+        Logger::get_instance().info("All models initialized successfully");
     } else {
-        Logger::get_instance().warning("部分模型初始化失败，请检查日志");
+        Logger::get_instance().warning("Some models failed to initialize, please check the logs");
     }
 
     return all_success;

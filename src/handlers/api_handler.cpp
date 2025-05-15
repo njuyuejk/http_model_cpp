@@ -13,7 +13,7 @@ void Handlers::handle_api_data(const httplib::Request& req, httplib::Response& r
     ExceptionHandler::handleRequest(req, res, [](const httplib::Request& req, httplib::Response& res) {
         // 检查内容类型
         if (!req.has_header("Content-Type") || req.get_header_value("Content-Type").find("application/json") == std::string::npos) {
-            throw APIException("请求必须包含 'application/json' Content-Type", 415);
+            throw APIException("Request must include 'application/json' Content-Type", 415);
         }
 
         // 解析 JSON 数据
@@ -21,12 +21,12 @@ void Handlers::handle_api_data(const httplib::Request& req, httplib::Response& r
         try {
             received_json = json::parse(req.body);
         } catch (const json::exception& e) {
-            throw JSONParseException(std::string("无效的JSON格式: ") + e.what());
+            throw JSONParseException(std::string("Invalid JSON format: ") + e.what());
         }
 
         // 验证必要字段
         if (!received_json.contains("message")) {
-            throw APIException("请求必须包含'message'字段", 400);
+            throw APIException("Request must include 'message' field", 400);
         }
 
         std::string message = received_json["message"];
@@ -36,10 +36,10 @@ void Handlers::handle_api_data(const httplib::Request& req, httplib::Response& r
 
         // 构建响应 JSON
         json response_json = {
-                {"状态", "成功"},
-                {"消息", message},
-                {"处理后消息", message},
-                {"已接收", true}
+                {"status", "success"},
+                {"message", message},
+                {"processed_message", message},
+                {"received", true}
         };
 
         // 发送响应

@@ -27,7 +27,7 @@ void ExceptionHandler::setErrorResponse(
         const httplib::Request* req) {
 
     int status_code = 500;
-    std::string error_type = "服务器错误";
+    std::string error_type = "Server Error";
 
     // 根据异常类型设置不同的状态码和错误类型
     if (auto app_ex = dynamic_cast<const AppException*>(&e)) {
@@ -35,24 +35,24 @@ void ExceptionHandler::setErrorResponse(
         error_type = app_ex->getErrorType();
     } else if (dynamic_cast<const json::exception*>(&e)) {
         status_code = 400;
-        error_type = "JSON解析错误";
+        error_type = "JSON Parsing Error";
     }
 
     // 构建错误响应JSON
     json error_json = {
-            {"状态", "错误"},
-            {"错误类型", error_type},
-            {"消息", e.what()}
+            {"status", "error"},
+            {"error_type", error_type},
+            {"message", e.what()}
     };
 
     // 如果有请求信息，添加路径
     if (req) {
-        error_json["路径"] = req->path;
+        error_json["path"] = req->path;
 
         // 记录错误日志
         std::stringstream log_msg;
         log_msg << error_type << " (" << status_code << "): "
-                << e.what() << " 路径: " << req->path;
+                << e.what() << " path: " << req->path;
         Logger::get_instance().error(log_msg.str());
     } else {
         // 记录错误日志（无请求信息）
@@ -71,12 +71,12 @@ bool ExceptionHandler::execute(const std::string& operation, std::function<void(
         return true;
     } catch (const std::exception& e) {
         std::stringstream log_msg;
-        log_msg << "执行操作失败: " << operation << " - " << e.what();
+        log_msg << "Operation execution failed: " << operation << " - " << e.what();
         Logger::get_instance().error(log_msg.str());
         return false;
     } catch (...) {
         std::stringstream log_msg;
-        log_msg << "执行操作失败（未知错误）: " << operation;
+        log_msg << "Operation execution failed (unknown error): " << operation;
         Logger::get_instance().error(log_msg.str());
         return false;
     }

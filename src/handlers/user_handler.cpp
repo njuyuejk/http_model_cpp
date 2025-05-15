@@ -12,14 +12,14 @@ using json = nlohmann::json;
 void Handlers::handle_user(const httplib::Request& req, httplib::Response& res) {
     ExceptionHandler::handleRequest(req, res, [](const httplib::Request& req, httplib::Response& res) {
         if (req.matches.size() < 2) {
-            throw APIException("无效的用户名参数", 400);
+            throw APIException("Invalid username parameter", 400);
         }
 
         std::string username = req.matches[1];
 
         // 验证用户名
         if (username.empty() || username.length() > 50) {
-            throw APIException("无效的用户名长度", 400);
+            throw APIException("Invalid username length", 400);
         }
 
         // 这里可以添加更多验证逻辑
@@ -30,14 +30,14 @@ void Handlers::handle_user(const httplib::Request& req, httplib::Response& res) 
             // 如果模型处理抛出异常，会被外部的ExceptionHandler捕获
 
             json response_json = {
-                    {"状态", "成功"},
-                    {"用户", username},
-                    {"模型响应", ""}
+                    {"status", "success"},
+                    {"user", username},
+                    {"model_response", ""}
             };
 
             res.set_content(response_json.dump(), "application/json");
         } catch (const std::exception& e) {
-            throw APIException(std::string("用户信息处理错误: ") + e.what(), 500);
+            throw APIException(std::string("User information processing error: ") + e.what(), 500);
         }
     });
 }

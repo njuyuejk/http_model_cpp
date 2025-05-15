@@ -10,12 +10,12 @@ int main() {
         // 初始化应用程序管理器
         auto& appManager = ApplicationManager::getInstance();
         if (!appManager.initialize("modelConfig.json")) {
-            std::cerr << "初始化应用程序失败" << std::endl;
+            std::cerr << "Failed to initialize application" << std::endl;
             return -1;
         }
 
         // 初始化所有路由组
-        ExceptionHandler::execute("初始化路由", [&]() {
+        ExceptionHandler::execute("init route", [&]() {
             RouteInitializer::initializeRoutes();
         });
 
@@ -23,13 +23,13 @@ int main() {
         HttpServer server(appManager.getHTTPServerConfig());
 
         // 配置所有路由
-        ExceptionHandler::execute("配置路由", [&]() {
+        ExceptionHandler::execute("configure route", [&]() {
             RouteManager::getInstance().configureRoutes(server);
         });
 
         // 启动服务器
         if (!server.start()) {
-            Logger::get_instance().error("服务器启动失败");
+            Logger::get_instance().error("Failed to start server");
             appManager.shutdown();
             return -1;
         }
@@ -39,12 +39,12 @@ int main() {
         // 在程序结束时会自动调用析构函数停止服务器和关闭应用程序管理器
         return 0;
     } catch (const std::exception& e) {
-        std::cerr << "程序运行时出现致命错误: " << e.what() << std::endl;
-        Logger::get_instance().fatal(std::string("程序出现致命错误: ") + e.what());
+        std::cerr << "Fatal error occurred during program execution: " << e.what() << std::endl;
+        Logger::get_instance().fatal(std::string("Fatal program error: ") + e.what());
         return -1;
     } catch (...) {
-        std::cerr << "程序运行时出现未知致命错误" << std::endl;
-        Logger::get_instance().fatal("程序出现未知致命错误");
+        std::cerr << "Unknown fatal error occurred during program execution" << std::endl;
+        Logger::get_instance().fatal("Unknown fatal program error");
         return -1;
     }
 }

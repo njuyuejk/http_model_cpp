@@ -7,9 +7,17 @@
 
 #include "common/Logger.h"
 #include "common/StreamConfig.h"
+#include "AIService/rknnPool.h"
 #include <string>
 #include <memory>
 #include <mutex>
+
+struct SingleModelEntry{
+    std::unique_ptr<rknn_lite> singleRKModel; // 单个模型
+    std::string modelName; // 模型名称
+    int modelType; // 模型类型
+    bool isEnabled; //模型可用
+};
 
 /**
  * @brief 应用程序管理器单例类
@@ -29,6 +37,10 @@ private:
 
     // 配置文件路径
     std::string configFilePath;
+
+public:
+    // AI处理部分
+    std::vector<std::unique_ptr<SingleModelEntry>> singleModelPools_;
 
 public:
     // 禁止拷贝和移动
