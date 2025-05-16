@@ -6,10 +6,13 @@
 #include "handlers/api_handler.h"
 #include "nlohmann/json.hpp"
 #include "exception/GlobalExceptionHandler.h"
+#include "common/base64.h"
+#include "opencv2/opencv.hpp"
+#include "app/ApplicationManager.h"
 
 using json = nlohmann::json;
 
-void Handlers::handle_api_data(const httplib::Request& req, httplib::Response& res) {
+void Handlers::handle_api_model_process(const httplib::Request& req, httplib::Response& res) {
     ExceptionHandler::handleRequest(req, res, [](const httplib::Request& req, httplib::Response& res) {
         // 检查内容类型
         if (!req.has_header("Content-Type") || req.get_header_value("Content-Type").find("application/json") == std::string::npos) {
@@ -25,11 +28,37 @@ void Handlers::handle_api_data(const httplib::Request& req, httplib::Response& r
         }
 
         // 验证必要字段
-        if (!received_json.contains("message")) {
+        if (!received_json.contains("img")) {
             throw APIException("Request must include 'message' field", 400);
         }
 
-        std::string message = received_json["message"];
+        std::string message = received_json["img"];
+
+        std::vector<unsigned char> decoded_data = std::vector<unsigned char>(base64_decode(message).begin(), base64_decode(message).end());
+
+        cv::Mat ori_img = cv::imdecode(decoded_data, cv::IMREAD_COLOR);
+
+        for (auto &model: ApplicationManager::getInstance().singleModelPools_) {
+            // 选择正确模型
+            if (model->modelType != 4) {
+                continue;
+            }
+
+            // 模型是否开启
+            if (!model->isEnabled) {
+                break;
+            }
+
+            model->singleRKModel->ori_img = ori_img;
+            model->singleRKModel->interf();
+            cv::Mat dstMat = model->singleRKModel->ori_img;
+            cv::imwrite("./test.jpg", dstMat);
+        }
+
+
+//        cv::imwrite("./test.jpg", ori_img);
+
+        Logger::info("output ori_img width: "+ std::to_string(ori_img.cols));
 
         // 处理数据
         // 示例：这里可以添加模型相关的处理逻辑
@@ -37,8 +66,8 @@ void Handlers::handle_api_data(const httplib::Request& req, httplib::Response& r
         // 构建响应 JSON
         json response_json = {
                 {"status", "success"},
-                {"message", message},
-                {"processed_message", message},
+                {"message", ori_img.cols},
+                {"processed_message", ori_img.rows},
                 {"received", true}
         };
 

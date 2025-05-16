@@ -7,8 +7,9 @@
 
 #include "RouteManager.h"
 #include "routeManager/BasicRoutes.h"
-#include "routeManager/UserRoutes.h"
+#include "routeManager/ModelConfigRoutes.h"
 #include "routeManager/ApiRoutes.h"
+#include "ModelRoutes.h"
 
 /**
  * @brief 路由初始化器
@@ -25,11 +26,14 @@ public:
         // 注册基础路由组
         routeManager.addGroup(std::make_shared<BasicRoutes>());
 
-        // 注册用户路由组
-        routeManager.addGroup(std::make_shared<UserRoutes>());
-
         // 注册API路由组
         routeManager.addGroup(std::make_shared<ApiRoutes>());
+
+        // 注册模型路由
+        routeManager.addGroup(std::make_shared<ModelRoutes>());
+
+        // 注册模型配置路由组
+        routeManager.addGroup(std::make_shared<ModelConfigRoutes>());
 
         // 可以在这里添加更多路由组
         // 例如:

@@ -8,7 +8,7 @@
 #include "httplib.h"
 
 namespace Handlers {
-    void handle_api_data(const httplib::Request& req, httplib::Response& res);
+    void handle_api_model_process(const httplib::Request& req, httplib::Response& res);
 }
 
 #endif //HTTP_MODEL_API_HANDLER_H

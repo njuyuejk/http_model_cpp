@@ -38,7 +38,7 @@ public:
      * @param logDir 日志文件目录
      * @param minLevel 最小记录日志级别
      */
-    static void init(bool logToFile = true, const std::string& logDir = "logs", LogLevel minLevel = LogLevel::INFO);
+    static void init(bool logToFile = false, const std::string& logDir = "logs", LogLevel minLevel = LogLevel::INFO);
 
     /**
      * @brief 关闭日志系统

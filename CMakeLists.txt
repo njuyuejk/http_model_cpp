@@ -54,6 +54,8 @@ set(common
         src/common/StreamConfig.cpp
         include/common/base64.h
         src/common/base64.cpp
+        include/common/utils.h
+        src/common/utils.cpp
 )
 
 set(app
@@ -68,16 +70,17 @@ set(route
         include/routeManager/RouteManager.h
         src/routeManager/RouteManager.cpp
         include/routeManager/BasicRoutes.h
-        include/routeManager/UserRoutes.h
+        include/routeManager/ModelConfigRoutes.h
         include/routeManager/ApiRoutes.h
         include/routeManager/RouteInitializer.h
+        include/routeManager/ModelRoutes.h
 )
 
 set(handlers
         src/handlers/root_handler.cpp
         include/handlers/root_handler.h
-        src/handlers/user_handler.cpp
-        include/handlers/user_handler.h
+        src/handlers/modelConfig_handler.cpp
+        include/handlers/modelConfig_handler.h
         src/handlers/api_handler.cpp
         include/handlers/api_handler.h
 )

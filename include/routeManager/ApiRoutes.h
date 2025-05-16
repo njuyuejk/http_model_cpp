@@ -18,8 +18,8 @@ public:
 
     void registerRoutes(HttpServer& server) override {
         // API数据接口
-        server.addPost("/api/data", Handlers::handle_api_data, "提交API数据")
-                .addGet("/api/data", Handlers::handle_api_data, "获取API数据");
+//        server.addPost("/api/data", Handlers::handle_api_data, "提交API数据")
+//                .addGet("/api/data", Handlers::handle_api_data, "获取API数据");
 
         // 这里可以添加更多API接口，例如：
         // server.addGet("/api/status", Handlers::handle_api_status, "获取API状态");

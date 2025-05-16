@@ -66,7 +66,16 @@ bool ApplicationManager::initialize(const std::string& configPath) {
     });
 
     // 可以在这里添加模型初始化代码，同样使用异常处理
-    // initializeModels();
+    bool models_initialized = ExceptionHandler::execute("init model", [&]() {
+        if (!initializeModels()) {
+            throw ConfigException("model init failed");
+        }
+    });
+
+    if (!models_initialized) {
+        Logger::get_instance().warning("model init failed, program will continue...");
+        // 可以在这里决定是否继续，或者根据需求终止程序
+    }
 
     initialized = true;
     Logger::get_instance().info("Application manager initialized successfully");

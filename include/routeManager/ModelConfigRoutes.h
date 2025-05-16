@@ -6,19 +6,20 @@
 #define USER_ROUTES_H
 
 #include "RouteManager.h"
-#include "handlers/user_handler.h"
+#include "handlers/modelConfig_handler.h"
 
 /**
  * @brief 用户相关路由组
  * 包含用户管理相关接口
  */
-class UserRoutes : public BaseRouteGroup {
+class ModelConfigRoutes : public BaseRouteGroup {
 public:
-    UserRoutes() : BaseRouteGroup("user", "/user", "用户相关接口") {}
+    ModelConfigRoutes() : BaseRouteGroup("model_config", "/api/model/model_config", "模型配置相关接口") {}
 
     void registerRoutes(HttpServer& server) override {
         // 用户信息接口
-        server.addGet(R"(/user/(\w+))", Handlers::handle_user, "获取用户信息");
+        server.addGet(R"(/api/model/model_config/(\w+))", Handlers::handle_model_config, "获取模型配置信息")
+                .addPost(R"(/api/model/model_config/(\w+))", Handlers::handle_model_config, "获取模型配置信息");
 
         // 这里可以添加更多用户相关接口，例如：
         // server.addPost("/user/register", Handlers::handle_user_register, "用户注册");

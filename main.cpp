@@ -9,7 +9,7 @@ int main() {
     try {
         // 初始化应用程序管理器
         auto& appManager = ApplicationManager::getInstance();
-        if (!appManager.initialize("modelConfig.json")) {
+        if (!appManager.initialize("./modelConfig.json")) {
             std::cerr << "Failed to initialize application" << std::endl;
             return -1;
         }
