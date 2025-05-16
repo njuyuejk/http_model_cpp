@@ -140,3 +140,32 @@ double getGaugeReading(const std::vector<int>& poseCls, const std::vector<std::v
 
     return res;
 }
+
+// 辅助函数：将 std::any 转换为 json
+json any_to_json(const std::any& value) {
+    try {
+        // 尝试转换为各种常见类型
+        if (value.type() == typeid(int)) {
+            return std::any_cast<int>(value);
+        }
+        else if (value.type() == typeid(double)) {
+            return std::round(std::any_cast<double>(value) * 10000.0) / 10000.0;
+        }
+        else if (value.type() == typeid(std::string)) {
+            return std::any_cast<std::string>(value);
+        }
+        else if (value.type() == typeid(bool)) {
+            return std::any_cast<bool>(value);
+        }
+        else if (value.type() == typeid(float)) {
+            return std::round(std::any_cast<float>(value) * 10000.0) / 10000.0;
+        }
+        // 如果需要支持更多类型，可以在这里添加
+
+        // 不支持的类型返回 null
+        return nullptr;
+    } catch (const std::bad_any_cast&) {
+        // 转换失败时返回 null
+        return nullptr;
+    }
+}
