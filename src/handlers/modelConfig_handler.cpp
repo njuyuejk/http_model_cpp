@@ -51,7 +51,6 @@ void Handlers::handle_model_config(const httplib::Request& req, httplib::Respons
 
         // 这里可以添加更多验证逻辑
 
-        // 示例：使用模型处理（假设用户名需要通过模型处理）
         try {
             // 模型处理逻辑可以放在这里
             // 如果模型处理抛出异常，会被外部的ExceptionHandler捕获
