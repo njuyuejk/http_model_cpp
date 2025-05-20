@@ -5,6 +5,9 @@
 #include "app/ApplicationManager.h"
 #include "exception/GlobalExceptionHandler.h"
 #include "grpc/GrpcServer.h"
+#include "routeManager/HttpServer.h"
+#include "routeManager/RouteManager.h"
+#include "routeManager/RouteInitializer.h"
 
 // 初始化静态成员
 ApplicationManager* ApplicationManager::instance = nullptr;
@@ -78,6 +81,26 @@ bool ApplicationManager::initialize(const std::string& configPath) {
         // 可以在这里决定是否继续，或者根据需求终止程序
     }
 
+    // 初始化gRPC服务器
+    bool grpc_initialized = initializeGrpcServer();
+    if (!grpc_initialized) {
+        Logger::get_instance().warning("gRPC server initialization failed, program will continue without gRPC functionality");
+    }
+
+    // 初始化路由
+    bool routes_initialized = initializeRoutes();
+    if (!routes_initialized) {
+        Logger::get_instance().error("Route initialization failed");
+        return false;
+    }
+
+    // 启动HTTP服务器
+    bool http_started = startHttpServer();
+    if (!http_started) {
+        Logger::get_instance().error("HTTP server failed to start");
+        return false;
+    }
+
     initialized = true;
     Logger::get_instance().info("Application manager initialized successfully");
     return true;
@@ -89,6 +112,18 @@ void ApplicationManager::shutdown() {
     }
 
     Logger::get_instance().info("Shutting down application manager...");
+
+    // 停止HTTP服务器
+    if (httpServer && httpServer->isRunning()) {
+        Logger::get_instance().info("Stopping HTTP server...");
+        httpServer->stop();
+    }
+
+    // 停止gRPC服务器
+    if (grpcServer) {
+        Logger::get_instance().info("Stopping gRPC server...");
+        grpcServer->stop();
+    }
 
     // 添加资源清理代码
     singleModelPools_.clear();
@@ -184,4 +219,107 @@ bool ApplicationManager::initializeModels() {
 std::string ApplicationManager::getGrpcServerAddress() const {
     const auto& grpcConfig = AppConfig::getGRPCServerConfig();
     return grpcConfig.host + ":" + std::to_string(grpcConfig.port);
+}
+
+bool ApplicationManager::initializeGrpcServer() {
+    return ExceptionHandler::execute("初始化gRPC服务器", [&]() {
+        std::string grpcAddress = getGrpcServerAddress();
+        Logger::info("正在初始化gRPC服务器，地址: " + grpcAddress);
+        grpcServer = std::make_unique<GrpcServer>(grpcAddress, *this);
+        if (!grpcServer->start()) {
+            Logger::warning("在 " + grpcAddress + " 上启动gRPC服务器失败，将继续运行但不包含gRPC功能");
+            return false;
+        } else {
+            Logger::info("gRPC服务器在 " + grpcAddress + " 上成功启动");
+            return true;
+        }
+    });
+}
+
+bool ApplicationManager::initializeRoutes() {
+    return ExceptionHandler::execute("初始化路由", [&]() {
+        // 初始化所有路由组
+        RouteInitializer::initializeRoutes();
+        Logger::info("路由初始化成功");
+        return true;
+    });
+}
+
+bool ApplicationManager::startHttpServer() {
+    return ExceptionHandler::execute("启动HTTP服务器", [&]() {
+        // 创建HTTP服务器
+        httpServer = std::make_unique<HttpServer>(getHTTPServerConfig());
+
+        // 配置所有路由
+        RouteManager::getInstance().configureRoutes(*httpServer);
+
+        // 启动服务器
+        if (!httpServer->start()) {
+            Logger::error("启动HTTP服务器失败");
+            return false;
+        }
+
+        Logger::info("HTTP服务器在 " + getHTTPServerConfig().host + ":" +
+                     std::to_string(getHTTPServerConfig().port) + " 上成功启动");
+        return true;
+    });
+}
+
+HttpServer* ApplicationManager::getHttpServer() const {
+    return httpServer.get();
+}
+
+GrpcServer* ApplicationManager::getGrpcServer() const {
+    return grpcServer.get();
+}
+
+std::shared_ptr<rknn_lite> ApplicationManager::getSharedModelReference(int modelType) const {
+    for (const auto& model : singleModelPools_) {
+        if (model && model->modelType == modelType) {
+            // 创建一个管理 rknn_lite 原始指针的 shared_ptr
+            // 但不负责删除资源 (unique_ptr 仍然拥有所有权)
+            return std::shared_ptr<rknn_lite>(model->singleRKModel.get(), [](rknn_lite*){
+                // 空自定义删除器，因为资源由 unique_ptr 管理
+            });
+        }
+    }
+    return nullptr;
+}
+
+std::shared_ptr<rknn_lite> ApplicationManager::getSharedModelByName(const std::string& modelName) const {
+    for (const auto& model : singleModelPools_) {
+        if (model && model->modelName == modelName) {
+            return std::shared_ptr<rknn_lite>(model->singleRKModel.get(), [](rknn_lite*){});
+        }
+    }
+    return nullptr;
+}
+
+std::vector<std::shared_ptr<rknn_lite>> ApplicationManager::getAllSharedModels() const {
+    std::vector<std::shared_ptr<rknn_lite>> sharedModels;
+    for (const auto& model : singleModelPools_) {
+        if (model) {
+            sharedModels.push_back(std::shared_ptr<rknn_lite>(model->singleRKModel.get(), [](rknn_lite*){}));
+        }
+    }
+    return sharedModels;
+}
+
+bool ApplicationManager::isModelEnabled(int modelType) const {
+    for (const auto& model : singleModelPools_) {
+        if (model && model->modelType == modelType) {
+            return model->isEnabled;
+        }
+    }
+    return false;
+}
+
+bool ApplicationManager::setModelEnabled(int modelType, bool enabled) {
+    for (auto& model : singleModelPools_) {
+        if (model && model->modelType == modelType) {
+            model->isEnabled = enabled;
+            return true;
+        }
+    }
+    return false;
 }

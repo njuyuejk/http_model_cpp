@@ -43,32 +43,37 @@ void Handlers::handle_api_model_process(const httplib::Request& req, httplib::Re
         std::vector<unsigned char> decoded_data = std::vector<unsigned char>(base64_decode(message).begin(), base64_decode(message).end());
 
         cv::Mat ori_img = cv::imdecode(decoded_data, cv::IMREAD_COLOR);
-
-        std::vector<std::vector<std::any>> results_vector;
-        for (auto &model: ApplicationManager::getInstance().singleModelPools_) {
-            // 选择正确模型
-            if (model->modelType != modelType) {
-                continue;
-            }
-
-            // 模型是否开启
-            if (!model->isEnabled) {
-                break;
-            }
-
-            model->singleRKModel->ori_img = ori_img;
-            if (!model->singleRKModel->interf()) {
-                throw ModelException("model inference field, please check input", model->modelName);
-            }
-            cv::Mat dstMat = model->singleRKModel->ori_img;
-            results_vector = model->singleRKModel->results_vector;
-
-            if (modelType == 1) {
-                plateResults_vector = model->singleRKModel->plateResults;
-            }
-//            cv::imwrite("./test.jpg", dstMat);
+        if (ori_img.empty()) {
+            throw APIException("image decode failed", 400);
         }
 
+        // 获取ApplicationManager实例
+        auto& appManager = ApplicationManager::getInstance();
+
+        // 检查模型是否启用
+        if (!appManager.isModelEnabled(modelType)) {
+            throw APIException("Model is not enabled", 400);
+        }
+
+        // 获取模型的共享引用
+        auto modelRef = appManager.getSharedModelReference(modelType);
+        if (!modelRef) {
+            throw APIException("Model not found for the specified type", 404);
+        }
+
+        std::vector<std::vector<std::any>> results_vector;
+
+        modelRef->ori_img = ori_img;
+        if (!modelRef->interf()) {
+            throw ModelException("model inference field, please check input", model->modelName);
+        }
+
+        cv::Mat dstMat = modelRef->ori_img;
+        results_vector = modelRef->results_vector;
+
+        if (modelType == 1) {
+            plateResults_vector = modelRef->plateResults;
+        }
 
 //        cv::imwrite("./test.jpg", ori_img);
 

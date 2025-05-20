@@ -18,7 +18,7 @@ void Handlers::handle_model_config(const httplib::Request& req, httplib::Respons
 
         std::string modelName = req.matches[1];
 
-        // 验证用户名
+        // 验证模型名称
         if (modelName.empty() || modelName.length() > 50) {
             throw APIException("Invalid username length", 400);
         }
@@ -52,12 +52,12 @@ void Handlers::handle_model_config(const httplib::Request& req, httplib::Respons
         // 这里可以添加更多验证逻辑
 
         try {
-            // 模型处理逻辑可以放在这里
-            // 如果模型处理抛出异常，会被外部的ExceptionHandler捕获
-            for (auto &model: ApplicationManager::getInstance().singleModelPools_) {
-                if (model->modelType == model_type) {
-                    model->isEnabled = isEnabled;
-                }
+            // 使用ApplicationManager设置模型状态
+            auto& appManager = ApplicationManager::getInstance();
+            bool success = appManager.setModelEnabled(model_type, isEnabled);
+
+            if (!success) {
+                throw APIException("Model not found for the specified type", 404);
             }
 
             json response_json = {

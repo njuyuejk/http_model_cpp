@@ -34,44 +34,35 @@ grpc::Status AIModelServiceImpl::ProcessImage(
             return grpc::Status::OK;
         }
 
-        // 使用AI模型处理
-        std::vector<std::vector<std::any>> results_vector;
-        std::vector<std::string> plate_results_vector;
-        bool model_found = false;
-
-        for (auto& model : appManager_.singleModelPools_) {
-            // 选择正确的模型
-            if (model->modelType != model_type) {
-                continue;
-            }
-
-            model_found = true;
-
-            // 检查模型是否启用
-            if (!model->isEnabled) {
-                response->set_success(false);
-                response->set_message("模型未启用");
-                return grpc::Status::OK;
-            }
-
-            model->singleRKModel->ori_img = ori_img;
-            if (!model->singleRKModel->interf()) {
-                response->set_success(false);
-                response->set_message("模型推理失败");
-                return grpc::Status::OK;
-            }
-
-            results_vector = model->singleRKModel->results_vector;
-
-            if (model_type == 1) {
-                plate_results_vector = model->singleRKModel->plateResults;
-            }
+        // 检查模型是否启用
+        if (!appManager_.isModelEnabled(model_type)) {
+            response->set_success(false);
+            response->set_message("模型未启用");
+            return grpc::Status::OK;
         }
 
-        if (!model_found) {
+        // 获取模型共享引用
+        auto modelRef = appManager_.getSharedModelReference(model_type);
+        if (!modelRef) {
             response->set_success(false);
             response->set_message("未找到模型类型");
             return grpc::Status::OK;
+        }
+
+        // 使用模型进行处理
+        modelRef->ori_img = ori_img;
+        if (!modelRef->interf()) {
+            response->set_success(false);
+            response->set_message("模型推理失败");
+            return grpc::Status::OK;
+        }
+
+        // 获取结果
+        std::vector<std::vector<std::any>> results_vector = modelRef->results_vector;
+        std::vector<std::string> plate_results_vector;
+
+        if (model_type == 1) {
+            plate_results_vector = modelRef->plateResults;
         }
 
         // 填充响应
@@ -120,31 +111,27 @@ grpc::Status AIModelServiceImpl::ControlModel(
         int model_type = request->model_type();
         bool enable = request->enabled();
 
-        bool found = false;
+        // 设置模型状态
+        bool success = appManager_.setModelEnabled(model_type, enable);
 
-        // 更新模型状态
-        for (auto& model : appManager_.singleModelPools_) {
-            if (model->modelType == model_type) {
-                model->isEnabled = enable;
-                found = true;
-
-                response->set_success(true);
-                response->set_model_name(model->modelName);
-                response->set_enabled(model->isEnabled);
-
-                Logger::info("模型控制成功: model_type=" +
-                             std::to_string(model_type) + ", enabled=" +
-                             (enable ? "true" : "false"));
-            }
-        }
-
-        if (!found) {
+        if (!success) {
             response->set_success(false);
             response->set_model_name(model_name);
             response->set_enabled(false);
             Logger::warning("未找到模型: model_type=" + std::to_string(model_type));
             return grpc::Status(grpc::StatusCode::NOT_FOUND, "未找到模型");
         }
+
+        // 获取当前状态
+        bool current_status = appManager_.isModelEnabled(model_type);
+
+        response->set_success(true);
+        response->set_model_name(model_name);
+        response->set_enabled(current_status);
+
+        Logger::info("模型控制成功: model_type=" +
+                     std::to_string(model_type) + ", enabled=" +
+                     (current_status ? "true" : "false"));
 
         return grpc::Status::OK;
     } catch (const std::exception& e) {
