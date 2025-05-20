@@ -11,6 +11,7 @@
 #include <string>
 #include <memory>
 #include <mutex>
+#include "grpc/GrpcServer.h"
 
 struct SingleModelEntry{
     std::unique_ptr<rknn_lite> singleRKModel; // 单个模型
@@ -37,6 +38,9 @@ private:
 
     // 配置文件路径
     std::string configFilePath;
+
+    // gRPC服务器实例
+    std::unique_ptr<GrpcServer> grpcServer_;
 
 public:
     // AI处理部分
@@ -78,6 +82,12 @@ public:
      * @return 初始化是否成功
      */
     bool initializeModels();
+
+    // 初始化gRPC服务器
+    bool initializeGrpcServer(const std::string& address);
+
+    // 获取gRPC服务器引用
+    GrpcServer* getGrpcServer() const;
 };
 
 #endif // APPLICATION_MANAGER_H

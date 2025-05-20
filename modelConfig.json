@@ -8,6 +8,10 @@
       "port": 8888,
       "connection_timeout": 5,
       "read_timeout": 5
+    },
+    "grpc_server": {
+      "host": "0.0.0.0",
+      "port": 50051
     }
   },
   "model": [

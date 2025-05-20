@@ -4,6 +4,8 @@ project(http_model)
 set(CMAKE_CXX_STANDARD 17)
 
 include_directories(include)
+include_directories("D:/project/C++/my/ffmpeg_push_pull/protobuf/include")
+include_directories("D:/project/C++/grpc-1.70.2/include")
 
 # 设置 opencv 的根目录
 set(OPENCV_ROOT "D:/AI/opencv/build/install")
@@ -115,6 +117,15 @@ set(ai_service
         src/AIService/rknnPool_Seg.cpp
 )
 
+set(grpc
+        include/grpc/grpc_service.pb.h
+        src/grpc/grpc_service.pb.cc
+        src/grpc/GrpcServer.cpp
+        include/grpc/GrpcServer.h
+        src/grpc/GrpcClient.cpp
+        include/grpc/GrpcClient.h
+)
+
 # 所有库源文件
 set(LIB_SOURCES
         ${handlers}
@@ -123,6 +134,7 @@ set(LIB_SOURCES
         ${route}
         ${exception}
         ${ai_service}
+        ${grpc}
 )
 
 # 创建静态库 (可根据需要改为 SHARED 库)

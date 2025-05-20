@@ -89,6 +89,11 @@ void ApplicationManager::shutdown() {
 
     Logger::get_instance().info("Shutting down application manager...");
 
+    // 如果已初始化，停止gRPC服务器
+    if (grpcServer_) {
+        grpcServer_->stop();
+    }
+
     // 添加资源清理代码
     singleModelPools_.clear();
     std::vector<std::unique_ptr<SingleModelEntry>>().swap(singleModelPools_);
@@ -178,4 +183,20 @@ bool ApplicationManager::initializeModels() {
     }
 
     return all_success;
+}
+
+bool ApplicationManager::initializeGrpcServer(const std::string& address) {
+    if (!initialized) {
+        Logger::error("应用程序管理器初始化前无法初始化gRPC服务器");
+        return false;
+    }
+
+    Logger::info("正在初始化gRPC服务器，地址: " + address);
+
+    grpcServer_ = std::make_unique<GrpcServer>(address, *this);
+    return grpcServer_->start();
+}
+
+GrpcServer* ApplicationManager::getGrpcServer() const {
+    return grpcServer_.get();
 }
