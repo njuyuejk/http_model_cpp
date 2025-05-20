@@ -6,11 +6,19 @@
 #include "common/Logger.h"
 
 GrpcClient::GrpcClient(const std::string& server_address) {
-    // 创建通道和存根
-    auto channel = grpc::CreateChannel(server_address, grpc::InsecureChannelCredentials());
-    stub_ = grpc_service::AIModelService::NewStub(channel);
+    try {
+        // 创建通道
+        auto channel = grpc::CreateChannel(server_address, grpc::InsecureChannelCredentials());
 
-    Logger::info("gRPC客户端已初始化，服务器地址: " + server_address);
+        // 正确方式：直接使用 NewStub 返回的 unique_ptr
+        stub_ = grpc_service::AIModelService::NewStub(channel);
+
+        Logger::info("gRPC客户端已初始化，服务器地址: " + server_address);
+    }
+    catch (const std::exception& e) {
+        Logger::error("gRPC客户端初始化失败: " + std::string(e.what()));
+        throw;
+    }
 }
 
 bool GrpcClient::processImage(const std::string& base64_image,

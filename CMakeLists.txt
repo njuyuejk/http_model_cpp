@@ -126,6 +126,8 @@ set(grpc
         include/grpc/GrpcClient.h
         src/grpc/AIModelServiceImpl.cpp
         include/grpc/AIModelServiceImpl.h
+        include/grpc/grpc_service.grpc.pb.h
+        src/grpc/grpc_service.grpc.pb.cc
 )
 
 # 所有库源文件

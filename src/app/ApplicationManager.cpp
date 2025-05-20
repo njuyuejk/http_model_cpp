@@ -4,6 +4,7 @@
 
 #include "app/ApplicationManager.h"
 #include "exception/GlobalExceptionHandler.h"
+#include "grpc/GrpcServer.h"
 
 // 初始化静态成员
 ApplicationManager* ApplicationManager::instance = nullptr;

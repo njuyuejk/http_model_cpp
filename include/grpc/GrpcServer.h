@@ -9,7 +9,9 @@
 #include <string>
 #include <grpcpp/grpcpp.h>
 #include "AIModelServiceImpl.h"
-#include "app/ApplicationManager.h"
+
+// 添加前向声明
+class ApplicationManager;
 
 class GrpcServer {
 public:

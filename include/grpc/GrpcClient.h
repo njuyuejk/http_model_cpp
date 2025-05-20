@@ -9,7 +9,9 @@
 #include <string>
 #include <vector>
 #include <grpcpp/grpcpp.h>
-#include "grpc_service.pb.h"
+#include "grpc_service.grpc.pb.h"
+#include <grpcpp/create_channel.h>
+#include <grpcpp/security/credentials.h>
 
 class GrpcClient {
 public:

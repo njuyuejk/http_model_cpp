@@ -48,7 +48,9 @@ void GrpcServer::stop() {
     }
 
     Logger::info("正在停止gRPC服务器");
+    // 尝试替代方法
     server_->Shutdown();
+
     running_ = false;
 }
 

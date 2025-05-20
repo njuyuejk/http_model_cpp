@@ -11,7 +11,9 @@
 #include <string>
 #include <memory>
 #include <mutex>
-#include "grpc/GrpcServer.h"
+
+// 添加前向声明
+class GrpcServer;
 
 struct SingleModelEntry{
     std::unique_ptr<rknn_lite> singleRKModel; // 单个模型
