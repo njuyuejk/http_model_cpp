@@ -3,6 +3,7 @@
 #include "routeManager/RouteManager.h"
 #include "routeManager/RouteInitializer.h"
 #include "exception/GlobalExceptionHandler.h"
+#include "grpc/GrpcServer.h"
 #include <iostream>
 
 int main() {
@@ -24,6 +25,19 @@ int main() {
             std::cerr << "Failed to initialize application" << std::endl;
             return -1;
         }
+
+        // 初始化gRPC服务器
+        std::unique_ptr<GrpcServer> grpcServer;
+        ExceptionHandler::execute("初始化gRPC服务器", [&]() {
+            std::string grpcAddress = appManager.getGrpcServerAddress();
+            Logger::info("正在初始化gRPC服务器，地址: " + grpcAddress);
+            grpcServer = std::make_unique<GrpcServer>(grpcAddress, appManager);
+            if (!grpcServer->start()) {
+                Logger::warning("在 " + grpcAddress + " 上启动gRPC服务器失败，将继续运行但不包含gRPC功能");
+            } else {
+                Logger::info("gRPC服务器在 " + grpcAddress + " 上成功启动");
+            }
+        });
 
         // 初始化所有路由组
         ExceptionHandler::execute("init route", [&]() {

@@ -41,9 +41,6 @@ private:
     // 配置文件路径
     std::string configFilePath;
 
-    // gRPC服务器实例
-    std::unique_ptr<GrpcServer> grpcServer_;
-
 public:
     // AI处理部分
     std::vector<std::unique_ptr<SingleModelEntry>> singleModelPools_;
@@ -85,11 +82,8 @@ public:
      */
     bool initializeModels();
 
-    // 初始化gRPC服务器
-    bool initializeGrpcServer(const std::string& address);
-
-    // 获取gRPC服务器引用
-    GrpcServer* getGrpcServer() const;
+    // 获取格式化为host:port的gRPC服务器地址
+    std::string getGrpcServerAddress() const;
 };
 
 #endif // APPLICATION_MANAGER_H
