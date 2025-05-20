@@ -90,6 +90,8 @@ void ApplicationManager::shutdown() {
     Logger::get_instance().info("Shutting down application manager...");
 
     // 添加资源清理代码
+    singleModelPools_.clear();
+    std::vector<std::unique_ptr<SingleModelEntry>>().swap(singleModelPools_);
 
     // 关闭日志系统
     Logger::shutdown();

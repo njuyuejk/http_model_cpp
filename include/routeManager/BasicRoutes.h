@@ -25,11 +25,13 @@ public:
 
         // 配置错误处理
         server.setErrorHandler([](const httplib::Request& req, httplib::Response& res) {
-            json error_json = {
-                    {"error", "Not Found"},
-                    {"path", req.path}
-            };
-            res.set_content(error_json.dump(), "application/json");
+//            json error_json = {
+//                    {"error", "Not Found"},
+//                    {"path", req.path}
+//            };
+            APIException notFoundError("未找到路径: " + req.path, 404);
+            ExceptionHandler::setErrorResponse(res, notFoundError, &req);
+//            res.set_content(error_json.dump(), "application/json");
             Logger::get_instance().log("404 Not Found: " + req.path, WARNING);
         });
 

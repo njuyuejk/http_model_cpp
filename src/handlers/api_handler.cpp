@@ -29,15 +29,16 @@ void Handlers::handle_api_model_process(const httplib::Request& req, httplib::Re
 
         // 验证必要字段
         if (!received_json.contains("img")) {
-            throw APIException("Request must include 'message' field", 400);
+            throw APIException("Request must include 'img' field", 400);
         }
 
         if (!received_json.contains("modelType")) {
-            throw APIException("Request must include 'message' field", 400);
+            throw APIException("Request must include 'modelType' field", 400);
         }
 
         std::string message = received_json["img"];
         int modelType = received_json["modelType"];
+        std::vector<std::string> plateResults_vector;
 
         std::vector<unsigned char> decoded_data = std::vector<unsigned char>(base64_decode(message).begin(), base64_decode(message).end());
 
@@ -56,9 +57,15 @@ void Handlers::handle_api_model_process(const httplib::Request& req, httplib::Re
             }
 
             model->singleRKModel->ori_img = ori_img;
-            model->singleRKModel->interf();
+            if (!model->singleRKModel->interf()) {
+                throw ModelException("model inference field, please check input", model->modelName);
+            }
             cv::Mat dstMat = model->singleRKModel->ori_img;
             results_vector = model->singleRKModel->results_vector;
+
+            if (modelType == 1) {
+                plateResults_vector = model->singleRKModel->plateResults;
+            }
 //            cv::imwrite("./test.jpg", dstMat);
         }
 
@@ -83,6 +90,8 @@ void Handlers::handle_api_model_process(const httplib::Request& req, httplib::Re
                 {"message", ori_img.cols},
                 {"processed_message", ori_img.rows},
                 {"detect_results", json_data},
+                {"plate_results", plateResults_vector},
+                {"detect_type", modelType},
                 {"received", true}
         };
 
