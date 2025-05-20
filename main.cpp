@@ -38,13 +38,6 @@ int main() {
             RouteManager::getInstance().configureRoutes(server);
         });
 
-        const auto& grpcConfig = AppConfig::getGRPCServerConfig();
-        std::string grpcAddress = grpcConfig.host + ":" + std::to_string(grpcConfig.port);
-        if (!appManager.initializeGrpcServer(grpcAddress)) {
-            Logger::get_instance().warning("无法在 " + grpcAddress + " 上启动gRPC服务器，将继续运行但不包含gRPC功能");
-            // 即使gRPC服务器启动失败，我们也会继续执行
-        }
-
         // 启动服务器
         if (!server.start()) {
             Logger::get_instance().error("Failed to start server");
