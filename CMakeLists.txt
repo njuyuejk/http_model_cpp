@@ -128,6 +128,13 @@ set(grpc
         include/grpc/AIModelServiceImpl.h
         include/grpc/grpc_service.grpc.pb.h
         src/grpc/grpc_service.grpc.pb.cc
+        include/grpc/GrpcServiceInitializerBase.h
+        src/grpc/AIModelServiceInitializer.cpp
+        include/grpc/AIModelServiceInitializer.h
+        src/grpc/GrpcServiceRegistry.cpp
+        include/grpc/GrpcServiceRegistry.h
+        src/grpc/GrpcServiceFactory.cpp
+        include/grpc/GrpcServiceFactory.h
 )
 
 # 所有库源文件

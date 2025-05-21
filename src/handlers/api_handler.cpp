@@ -65,7 +65,7 @@ void Handlers::handle_api_model_process(const httplib::Request& req, httplib::Re
 
         modelRef->ori_img = ori_img;
         if (!modelRef->interf()) {
-            throw ModelException("model inference field, please check input", model->modelName);
+            throw ModelException("model inference field, please check input", "Unknown model");
         }
 
         cv::Mat dstMat = modelRef->ori_img;

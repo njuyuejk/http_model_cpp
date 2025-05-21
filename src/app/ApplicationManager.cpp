@@ -8,6 +8,9 @@
 #include "routeManager/HttpServer.h"
 #include "routeManager/RouteManager.h"
 #include "routeManager/RouteInitializer.h"
+#include "grpc/GrpcServiceInitializerBase.h"
+#include "grpc/GrpcServiceRegistry.h"
+#include "grpc/GrpcServiceFactory.h"
 
 // 初始化静态成员
 ApplicationManager* ApplicationManager::instance = nullptr;
@@ -41,7 +44,7 @@ bool ApplicationManager::initialize(const std::string& configPath) {
 
     configFilePath = configPath;
 
-    // 先初始化日志系统，使用默认值
+    // 初始化日志系统，使用默认值
     Logger::init();
 
     Logger::get_instance().info("Initializing application manager...");
@@ -55,13 +58,12 @@ bool ApplicationManager::initialize(const std::string& configPath) {
 
     if (!config_loaded) {
         Logger::get_instance().error("Configuration loading failed, using default configuration");
-        // 可以在这里设置默认配置值
     } else {
         Logger::get_instance().info("Configuration loaded successfully");
     }
 
     // 使用加载的设置或默认值重新初始化日志系统
-    ExceptionHandler::execute("Initializ Log systerm", [&]() {
+    ExceptionHandler::execute("初始化日志系统", [&]() {
         Logger::init(
                 AppConfig::getLogToFile(),
                 AppConfig::getLogFilePath(),
@@ -69,40 +71,45 @@ bool ApplicationManager::initialize(const std::string& configPath) {
         );
     });
 
-    // 可以在这里添加模型初始化代码，同样使用异常处理
-    bool models_initialized = ExceptionHandler::execute("init model", [&]() {
+    // 初始化模型
+    bool models_initialized = ExceptionHandler::execute("初始化模型", [&]() {
         if (!initializeModels()) {
-            throw ConfigException("model init failed");
+            throw ConfigException("模型初始化失败");
         }
     });
 
     if (!models_initialized) {
-        Logger::get_instance().warning("model init failed, program will continue...");
-        // 可以在这里决定是否继续，或者根据需求终止程序
+        Logger::get_instance().warning("模型初始化失败，程序将继续运行...");
+    }
+
+    // 从注册表注册所有gRPC服务
+    bool services_registered = registerGrpcServicesFromRegistry();
+    if (!services_registered) {
+        Logger::get_instance().warning("gRPC服务注册失败，程序将继续但gRPC功能可能不可用");
     }
 
     // 初始化gRPC服务器
     bool grpc_initialized = initializeGrpcServer();
     if (!grpc_initialized) {
-        Logger::get_instance().warning("gRPC server initialization failed, program will continue without gRPC functionality");
+        Logger::get_instance().warning("gRPC服务器初始化失败，程序将继续但不包含gRPC功能");
     }
 
     // 初始化路由
     bool routes_initialized = initializeRoutes();
     if (!routes_initialized) {
-        Logger::get_instance().error("Route initialization failed");
+        Logger::get_instance().error("路由初始化失败");
         return false;
     }
 
     // 启动HTTP服务器
     bool http_started = startHttpServer();
     if (!http_started) {
-        Logger::get_instance().error("HTTP server failed to start");
+        Logger::get_instance().error("HTTP服务器启动失败");
         return false;
     }
 
     initialized = true;
-    Logger::get_instance().info("Application manager initialized successfully");
+    Logger::get_instance().info("应用程序管理器初始化成功");
     return true;
 }
 
@@ -111,23 +118,27 @@ void ApplicationManager::shutdown() {
         return;
     }
 
-    Logger::get_instance().info("Shutting down application manager...");
+    Logger::get_instance().info("关闭应用程序管理器...");
 
     // 停止HTTP服务器
     if (httpServer && httpServer->isRunning()) {
-        Logger::get_instance().info("Stopping HTTP server...");
+        Logger::get_instance().info("停止HTTP服务器...");
         httpServer->stop();
     }
 
     // 停止gRPC服务器
     if (grpcServer) {
-        Logger::get_instance().info("Stopping gRPC server...");
+        Logger::get_instance().info("停止gRPC服务器...");
         grpcServer->stop();
     }
 
-    // 添加资源清理代码
+    // 清理模型资源
     singleModelPools_.clear();
     std::vector<std::unique_ptr<SingleModelEntry>>().swap(singleModelPools_);
+
+    // 清理gRPC服务初始化器
+    grpcServiceInitializers.clear();
+    std::vector<std::unique_ptr<GrpcServiceInitializerBase>>().swap(grpcServiceInitializers);
 
     // 关闭日志系统
     Logger::shutdown();
@@ -140,13 +151,13 @@ const HTTPServerConfig& ApplicationManager::getHTTPServerConfig() const {
 }
 
 bool ApplicationManager::initializeModels() {
-    Logger::get_instance().info("Starting model initialization...");
+    Logger::get_instance().info("开始模型初始化...");
 
     // 获取所有模型配置
     const auto& modelConfigs = AppConfig::getModelConfigs();
 
     if (modelConfigs.empty()) {
-        Logger::get_instance().warning("No model configuration found");
+        Logger::get_instance().warning("未找到模型配置");
         return true; // 没有模型也不是错误
     }
 
@@ -157,35 +168,40 @@ bool ApplicationManager::initializeModels() {
         bool model_initialized = ExceptionHandler::execute(
                 "初始化模型: " + config.name,
                 [&]() {
-                    Logger::get_instance().info("Initializing model: " + config.name);
+                    Logger::get_instance().info("初始化模型: " + config.name);
 
                     // 验证模型路径
                     if (config.model_path.empty()) {
-                        throw ModelException("Model path is empty", config.name);
+                        throw ModelException("模型路径为空", config.name);
                     }
 
                     // 检查模型文件是否存在
                     std::ifstream modelFile(config.model_path);
                     if (!modelFile.good()) {
-                        throw ModelException("Model file does not exist or cannot be accessed: " + config.model_path, config.name);
+                        throw ModelException("模型文件不存在或无法访问: " + config.model_path, config.name);
                     }
 
                     // 验证模型类型
                     if (config.model_type <= 0) {
-                        throw ModelException("Invalid model type: " + std::to_string(config.model_type), config.name);
+                        throw ModelException("无效的模型类型: " + std::to_string(config.model_type), config.name);
                     }
 
                     // 验证阈值范围
                     if (config.objectThresh < 0.0 || config.objectThresh > 1.0) {
                         throw ModelException(
-                                "Invalid object detection threshold: " + std::to_string(config.objectThresh) +
-                                ", threshold must be between 0.0 and 1.0",
+                                "无效的对象检测阈值: " + std::to_string(config.objectThresh) +
+                                ", 阈值必须在0.0到1.0之间",
                                 config.name
                         );
                     }
 
-                    std::unique_ptr<rknn_lite> rknn_ptr = std::make_unique<rknn_lite>(const_cast<char *>(config.model_path.c_str()),config.model_type % 3,
-                                                                                      config.model_type, config.objectThresh);
+                    std::unique_ptr<rknn_lite> rknn_ptr = std::make_unique<rknn_lite>(
+                            const_cast<char*>(config.model_path.c_str()),
+                            config.model_type % 3,
+                            config.model_type,
+                            config.objectThresh
+                    );
+
                     std::unique_ptr<SingleModelEntry> aiPool = std::make_unique<SingleModelEntry>();
 
                     aiPool->modelType = config.model_type;
@@ -196,21 +212,21 @@ bool ApplicationManager::initializeModels() {
                     singleModelPools_.emplace_back(std::move(aiPool));
 
                     // 添加初始化完成的日志
-                    Logger::get_instance().info("Model initialized successfully: " + config.name);
+                    Logger::get_instance().info("模型初始化成功: " + config.name);
                 }
         );
 
         // 如果某个模型初始化失败，记录但继续初始化其他模型
         if (!model_initialized) {
             all_success = false;
-            Logger::get_instance().error("Model initialization failed: " + config.name + ", continuing to initialize other models");
+            Logger::get_instance().error("模型初始化失败: " + config.name + ", 继续初始化其他模型");
         }
     }
 
     if (all_success) {
-        Logger::get_instance().info("All models initialized successfully");
+        Logger::get_instance().info("所有模型初始化成功");
     } else {
-        Logger::get_instance().warning("Some models failed to initialize, please check the logs");
+        Logger::get_instance().warning("部分模型初始化失败，请检查日志");
     }
 
     return all_success;
@@ -221,18 +237,120 @@ std::string ApplicationManager::getGrpcServerAddress() const {
     return grpcConfig.host + ":" + std::to_string(grpcConfig.port);
 }
 
+HttpServer* ApplicationManager::getHttpServer() const {
+    return httpServer.get();
+}
+
+GrpcServer* ApplicationManager::getGrpcServer() const {
+    return grpcServer.get();
+}
+
+// 模型访问方法实现
+std::shared_ptr<rknn_lite> ApplicationManager::getSharedModelReference(int modelType) const {
+    for (const auto& model : singleModelPools_) {
+        if (model && model->modelType == modelType) {
+            // 创建共享引用但不负责删除资源
+            return std::shared_ptr<rknn_lite>(model->singleRKModel.get(), [](rknn_lite*){});
+        }
+    }
+    return nullptr;
+}
+
+std::shared_ptr<rknn_lite> ApplicationManager::getSharedModelByName(const std::string& modelName) const {
+    for (const auto& model : singleModelPools_) {
+        if (model && model->modelName == modelName) {
+            return std::shared_ptr<rknn_lite>(model->singleRKModel.get(), [](rknn_lite*){});
+        }
+    }
+    return nullptr;
+}
+
+bool ApplicationManager::isModelEnabled(int modelType) const {
+    for (const auto& model : singleModelPools_) {
+        if (model && model->modelType == modelType) {
+            return model->isEnabled;
+        }
+    }
+    return false;
+}
+
+bool ApplicationManager::setModelEnabled(int modelType, bool enabled) {
+    for (auto& model : singleModelPools_) {
+        if (model && model->modelType == modelType) {
+            model->isEnabled = enabled;
+            return true;
+        }
+    }
+    return false;
+}
+
+// gRPC服务方法实现
+void ApplicationManager::registerGrpcServiceInitializer(std::unique_ptr<GrpcServiceInitializerBase> initializer) {
+    if (initializer) {
+        Logger::info("注册gRPC服务初始化器: " + initializer->getServiceName());
+        grpcServiceInitializers.push_back(std::move(initializer));
+    }
+}
+
+bool ApplicationManager::initializeGrpcServices() {
+    if (!grpcServer) {
+        Logger::error("无法初始化gRPC服务: 服务器未创建");
+        return false;
+    }
+
+    bool allSucceeded = true;
+
+    for (const auto& initializer : grpcServiceInitializers) {
+        if (initializer) {
+            Logger::info("初始化gRPC服务: " + initializer->getServiceName());
+
+            if (!initializer->initialize(grpcServer.get())) {
+                Logger::error("初始化gRPC服务失败: " + initializer->getServiceName());
+                allSucceeded = false;
+                // 继续初始化其他服务，即使一个失败
+            } else {
+                Logger::info("成功初始化gRPC服务: " + initializer->getServiceName());
+            }
+        }
+    }
+
+    return allSucceeded;
+}
+
+bool ApplicationManager::registerGrpcServicesFromRegistry() {
+    return ExceptionHandler::execute("从注册表注册gRPC服务", [&]() {
+        Logger::info("从注册表注册gRPC服务");
+        auto& registry = GrpcServiceRegistry::getInstance();
+
+        // 使用工厂初始化所有服务
+        GrpcServiceFactory::initializeAllServices(registry, *this);
+
+        // 注册所有服务
+        return registry.registerAllServices(*this);
+    });
+}
+
 bool ApplicationManager::initializeGrpcServer() {
     return ExceptionHandler::execute("初始化gRPC服务器", [&]() {
         std::string grpcAddress = getGrpcServerAddress();
         Logger::info("正在初始化gRPC服务器，地址: " + grpcAddress);
-        grpcServer = std::make_unique<GrpcServer>(grpcAddress, *this);
+
+        // 创建gRPC服务器
+        grpcServer = std::make_unique<GrpcServer>(grpcAddress);
+
+        // 初始化注册的服务
+        if (!initializeGrpcServices()) {
+            Logger::warning("部分gRPC服务初始化失败");
+        }
+
+        // 启动服务器
         if (!grpcServer->start()) {
             Logger::warning("在 " + grpcAddress + " 上启动gRPC服务器失败，将继续运行但不包含gRPC功能");
             return false;
-        } else {
-            Logger::info("gRPC服务器在 " + grpcAddress + " 上成功启动");
-            return true;
         }
+
+        Logger::info("gRPC服务器在 " + grpcAddress + " 上成功启动");
+        return true;
     });
 }
 
@@ -263,63 +381,4 @@ bool ApplicationManager::startHttpServer() {
                      std::to_string(getHTTPServerConfig().port) + " 上成功启动");
         return true;
     });
-}
-
-HttpServer* ApplicationManager::getHttpServer() const {
-    return httpServer.get();
-}
-
-GrpcServer* ApplicationManager::getGrpcServer() const {
-    return grpcServer.get();
-}
-
-std::shared_ptr<rknn_lite> ApplicationManager::getSharedModelReference(int modelType) const {
-    for (const auto& model : singleModelPools_) {
-        if (model && model->modelType == modelType) {
-            // 创建一个管理 rknn_lite 原始指针的 shared_ptr
-            // 但不负责删除资源 (unique_ptr 仍然拥有所有权)
-            return std::shared_ptr<rknn_lite>(model->singleRKModel.get(), [](rknn_lite*){
-                // 空自定义删除器，因为资源由 unique_ptr 管理
-            });
-        }
-    }
-    return nullptr;
-}
-
-std::shared_ptr<rknn_lite> ApplicationManager::getSharedModelByName(const std::string& modelName) const {
-    for (const auto& model : singleModelPools_) {
-        if (model && model->modelName == modelName) {
-            return std::shared_ptr<rknn_lite>(model->singleRKModel.get(), [](rknn_lite*){});
-        }
-    }
-    return nullptr;
-}
-
-std::vector<std::shared_ptr<rknn_lite>> ApplicationManager::getAllSharedModels() const {
-    std::vector<std::shared_ptr<rknn_lite>> sharedModels;
-    for (const auto& model : singleModelPools_) {
-        if (model) {
-            sharedModels.push_back(std::shared_ptr<rknn_lite>(model->singleRKModel.get(), [](rknn_lite*){}));
-        }
-    }
-    return sharedModels;
-}
-
-bool ApplicationManager::isModelEnabled(int modelType) const {
-    for (const auto& model : singleModelPools_) {
-        if (model && model->modelType == modelType) {
-            return model->isEnabled;
-        }
-    }
-    return false;
-}
-
-bool ApplicationManager::setModelEnabled(int modelType, bool enabled) {
-    for (auto& model : singleModelPools_) {
-        if (model && model->modelType == modelType) {
-            model->isEnabled = enabled;
-            return true;
-        }
-    }
-    return false;
 }

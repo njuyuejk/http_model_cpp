@@ -11,16 +11,18 @@
 #include <string>
 #include <memory>
 #include <mutex>
+#include <vector>
 
-// 前向声明
+// Forward declarations
 class GrpcServer;
 class HttpServer;
+class GrpcServiceInitializerBase;
 
-struct SingleModelEntry{
+struct SingleModelEntry {
     std::unique_ptr<rknn_lite> singleRKModel; // 单个模型
     std::string modelName; // 模型名称
     int modelType; // 模型类型
-    bool isEnabled; //模型可用
+    bool isEnabled; // 模型可用
 };
 
 /**
@@ -47,6 +49,9 @@ private:
 
     // HTTP服务器
     std::unique_ptr<HttpServer> httpServer;
+
+    // gRPC服务初始化器集合
+    std::vector<std::unique_ptr<GrpcServiceInitializerBase>> grpcServiceInitializers;
 
     // 初始化gRPC服务器
     bool initializeGrpcServer();
@@ -107,20 +112,56 @@ public:
     // 获取gRPC服务器实例
     GrpcServer* getGrpcServer() const;
 
-    // 返回特定类型模型的共享引用
+    // 模型访问方法 - 共享指针实现
+
+    /**
+     * @brief 按类型获取模型的共享引用
+     * @param modelType 模型类型
+     * @return 模型的共享引用，若未找到则返回nullptr
+     */
     std::shared_ptr<rknn_lite> getSharedModelReference(int modelType) const;
 
-    // 获取特定名称模型的共享引用
+    /**
+     * @brief 按名称获取模型的共享引用
+     * @param modelName 模型名称
+     * @return 模型的共享引用，若未找到则返回nullptr
+     */
     std::shared_ptr<rknn_lite> getSharedModelByName(const std::string& modelName) const;
 
-    // 返回所有模型的共享访问容器
-    std::vector<std::shared_ptr<rknn_lite>> getAllSharedModels() const;
-
-    // 获取特定类型模型的可用状态
+    /**
+     * @brief 获取指定类型模型的可用状态
+     * @param modelType 模型类型
+     * @return 模型是否可用
+     */
     bool isModelEnabled(int modelType) const;
 
-    // 设置特定类型模型的可用状态
+    /**
+     * @brief 设置指定类型模型的可用状态
+     * @param modelType 模型类型
+     * @param enabled 是否启用
+     * @return 设置是否成功
+     */
     bool setModelEnabled(int modelType, bool enabled);
+
+    // gRPC服务注册方法
+
+    /**
+     * @brief 注册gRPC服务初始化器
+     * @param initializer 服务初始化器
+     */
+    void registerGrpcServiceInitializer(std::unique_ptr<GrpcServiceInitializerBase> initializer);
+
+    /**
+     * @brief 初始化所有注册的gRPC服务
+     * @return 初始化是否成功
+     */
+    bool initializeGrpcServices();
+
+    /**
+     * @brief 从注册表注册所有gRPC服务
+     * @return 注册是否成功
+     */
+    bool registerGrpcServicesFromRegistry();
 };
 
 #endif // APPLICATION_MANAGER_H
