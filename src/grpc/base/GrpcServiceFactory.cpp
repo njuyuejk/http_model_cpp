@@ -10,7 +10,7 @@
 // 在此处添加其他服务初始化器头文件
 
 void GrpcServiceFactory::initializeAllServices(GrpcServiceRegistry& registry, ApplicationManager& appManager) {
-    Logger::info("初始化所有gRPC服务...");
+    Logger::info("Initializing all gRPC services...");
 
     // 注册AI模型服务
     registry.registerInitializer(std::make_unique<AIModelServiceInitializer>(appManager));
@@ -18,5 +18,5 @@ void GrpcServiceFactory::initializeAllServices(GrpcServiceRegistry& registry, Ap
     // 在此处注册其他服务
     // 示例: registry.registerInitializer(std::make_unique<SystemMonitorServiceInitializer>());
 
-    Logger::info("已成功初始化 " + std::to_string(registry.getServiceCount()) + " 个gRPC服务");
+    Logger::info("Successfully initialized " + std::to_string(registry.getServiceCount()) + " gRPC services");
 }

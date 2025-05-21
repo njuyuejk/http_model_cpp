@@ -38,7 +38,7 @@ public:
 class ConfigException : public AppException {
 public:
     ConfigException(const std::string& message)
-            : AppException(message, 500, "配置错误") {}
+            : AppException(message, 500, "Configuration Error") {}
 };
 
 /**
@@ -48,7 +48,7 @@ public:
 class APIException : public AppException {
 public:
     APIException(const std::string& message, int code = 400)
-            : AppException(message, code, "API错误") {}
+            : AppException(message, code, "API Error") {}
 };
 
 /**
@@ -58,7 +58,7 @@ public:
 class JSONParseException : public AppException {
 public:
     JSONParseException(const std::string& message)
-            : AppException(message, 400, "JSON解析错误") {}
+            : AppException(message, 400, "JSON Parse Error") {}
 };
 
 /**
@@ -68,14 +68,14 @@ public:
 class ModelException : public AppException {
 public:
     ModelException(const std::string& message, const std::string& model_name = "")
-            : AppException(createMessage(message, model_name), 500, "模型错误") {}
+            : AppException(createMessage(message, model_name), 500, "Model Error") {}
 
 private:
     static std::string createMessage(const std::string& message, const std::string& model_name) {
         if (!model_name.empty()) {
-            return "模型'" + model_name + "'错误: " + message;
+            return "Model '" + model_name + "' Error: " + message;
         }
-        return "模型错误: " + message;
+        return "Model Error: " + message;
     }
 };
 

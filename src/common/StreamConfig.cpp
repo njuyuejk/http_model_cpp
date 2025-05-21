@@ -91,7 +91,7 @@ bool AppConfig::loadFromFile(const std::string& configFilePath) {
 
             if (general.contains("grpc_server") && general["grpc_server"].is_object()) {
                 grpcServerConfig = GRPCServerConfig::fromJson(general["grpc_server"]);
-                Logger::info("加载gRPC服务器配置: " + grpcServerConfig.host + ":" +
+                Logger::info("Loading gRPC server configuration: " + grpcServerConfig.host + ":" +
                              std::to_string(grpcServerConfig.port));
             }
         }

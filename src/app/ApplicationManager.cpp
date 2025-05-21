@@ -50,9 +50,9 @@ bool ApplicationManager::initialize(const std::string& configPath) {
     Logger::get_instance().info("Initializing application manager...");
 
     // 使用异常处理加载配置
-    bool config_loaded = ExceptionHandler::execute("加载配置文件", [&]() {
+    bool config_loaded = ExceptionHandler::execute("Loading configuration file", [&]() {
         if (!AppConfig::loadFromFile(configFilePath)) {
-            throw ConfigException("无法从以下路径加载配置: " + configFilePath);
+            throw ConfigException("Failed to load configuration from path: " + configFilePath);
         }
     });
 
@@ -63,7 +63,7 @@ bool ApplicationManager::initialize(const std::string& configPath) {
     }
 
     // 使用加载的设置或默认值重新初始化日志系统
-    ExceptionHandler::execute("初始化日志系统", [&]() {
+    ExceptionHandler::execute("Initializing logging system", [&]() {
         Logger::init(
                 AppConfig::getLogToFile(),
                 AppConfig::getLogFilePath(),
@@ -72,44 +72,44 @@ bool ApplicationManager::initialize(const std::string& configPath) {
     });
 
     // 初始化模型
-    bool models_initialized = ExceptionHandler::execute("初始化模型", [&]() {
+    bool models_initialized = ExceptionHandler::execute("Initializing models", [&]() {
         if (!initializeModels()) {
-            throw ConfigException("模型初始化失败");
+            throw ConfigException("Model initialization failed");
         }
     });
 
     if (!models_initialized) {
-        Logger::get_instance().warning("模型初始化失败，程序将继续运行...");
+        Logger::get_instance().warning("Model initialization failed, program will continue running...");
     }
 
     // 从注册表注册所有gRPC服务
     bool services_registered = registerGrpcServicesFromRegistry();
     if (!services_registered) {
-        Logger::get_instance().warning("gRPC服务注册失败，程序将继续但gRPC功能可能不可用");
+        Logger::get_instance().warning("gRPC service registration failed, program will continue but gRPC functionality might be unavailable");
     }
 
     // 初始化gRPC服务器
     bool grpc_initialized = initializeGrpcServer();
     if (!grpc_initialized) {
-        Logger::get_instance().warning("gRPC服务器初始化失败，程序将继续但不包含gRPC功能");
+        Logger::get_instance().warning("gRPC server initialization failed, program will continue without gRPC functionality");
     }
 
     // 初始化路由
     bool routes_initialized = initializeRoutes();
     if (!routes_initialized) {
-        Logger::get_instance().error("路由初始化失败");
+        Logger::get_instance().error("Route initialization failed");
         return false;
     }
 
     // 启动HTTP服务器
     bool http_started = startHttpServer();
     if (!http_started) {
-        Logger::get_instance().error("HTTP服务器启动失败");
+        Logger::get_instance().error("HTTP server start failed");
         return false;
     }
 
     initialized = true;
-    Logger::get_instance().info("应用程序管理器初始化成功");
+    Logger::get_instance().info("Application manager initialized successfully");
     return true;
 }
 
@@ -118,17 +118,17 @@ void ApplicationManager::shutdown() {
         return;
     }
 
-    Logger::get_instance().info("关闭应用程序管理器...");
+    Logger::get_instance().info("Shutting down application manager...");
 
     // 停止HTTP服务器
     if (httpServer && httpServer->isRunning()) {
-        Logger::get_instance().info("停止HTTP服务器...");
+        Logger::get_instance().info("Stopping HTTP server...");
         httpServer->stop();
     }
 
     // 停止gRPC服务器
     if (grpcServer) {
-        Logger::get_instance().info("停止gRPC服务器...");
+        Logger::get_instance().info("Stopping gRPC server...");
         grpcServer->stop();
     }
 
@@ -151,13 +151,13 @@ const HTTPServerConfig& ApplicationManager::getHTTPServerConfig() const {
 }
 
 bool ApplicationManager::initializeModels() {
-    Logger::get_instance().info("开始模型初始化...");
+    Logger::get_instance().info("Starting model initialization...");
 
     // 获取所有模型配置
     const auto& modelConfigs = AppConfig::getModelConfigs();
 
     if (modelConfigs.empty()) {
-        Logger::get_instance().warning("未找到模型配置");
+        Logger::get_instance().warning("No model configuration found");
         return true; // 没有模型也不是错误
     }
 
@@ -168,29 +168,29 @@ bool ApplicationManager::initializeModels() {
         bool model_initialized = ExceptionHandler::execute(
                 "初始化模型: " + config.name,
                 [&]() {
-                    Logger::get_instance().info("初始化模型: " + config.name);
+                    Logger::get_instance().info("Initializing model: " + config.name);
 
                     // 验证模型路径
                     if (config.model_path.empty()) {
-                        throw ModelException("模型路径为空", config.name);
+                        throw ModelException("Model path is empty", config.name);
                     }
 
                     // 检查模型文件是否存在
                     std::ifstream modelFile(config.model_path);
                     if (!modelFile.good()) {
-                        throw ModelException("模型文件不存在或无法访问: " + config.model_path, config.name);
+                        throw ModelException("Model file does not exist or cannot be accessed: " + config.model_path, config.name);
                     }
 
                     // 验证模型类型
                     if (config.model_type <= 0) {
-                        throw ModelException("无效的模型类型: " + std::to_string(config.model_type), config.name);
+                        throw ModelException("Invalid model type: " + std::to_string(config.model_type), config.name);
                     }
 
                     // 验证阈值范围
                     if (config.objectThresh < 0.0 || config.objectThresh > 1.0) {
                         throw ModelException(
-                                "无效的对象检测阈值: " + std::to_string(config.objectThresh) +
-                                ", 阈值必须在0.0到1.0之间",
+                                "Invalid object detection threshold: " + std::to_string(config.objectThresh) +
+                                ", threshold must be between 0.0 and 1.0",
                                 config.name
                         );
                     }
@@ -212,21 +212,21 @@ bool ApplicationManager::initializeModels() {
                     singleModelPools_.emplace_back(std::move(aiPool));
 
                     // 添加初始化完成的日志
-                    Logger::get_instance().info("模型初始化成功: " + config.name);
+                    Logger::get_instance().info("Model initialized successfully: " + config.name);
                 }
         );
 
         // 如果某个模型初始化失败，记录但继续初始化其他模型
         if (!model_initialized) {
             all_success = false;
-            Logger::get_instance().error("模型初始化失败: " + config.name + ", 继续初始化其他模型");
+            Logger::get_instance().error("Model initialization failed: " + config.name + ", continuing with initializing other models");
         }
     }
 
     if (all_success) {
-        Logger::get_instance().info("所有模型初始化成功");
+        Logger::get_instance().info("All models initialized successfully");
     } else {
-        Logger::get_instance().warning("部分模型初始化失败，请检查日志");
+        Logger::get_instance().warning("Some models failed to initialize, please check logs");
     }
 
     return all_success;
@@ -287,14 +287,14 @@ bool ApplicationManager::setModelEnabled(int modelType, bool enabled) {
 // gRPC服务方法实现
 void ApplicationManager::registerGrpcServiceInitializer(std::unique_ptr<GrpcServiceInitializerBase> initializer) {
     if (initializer) {
-        Logger::info("注册gRPC服务初始化器: " + initializer->getServiceName());
+        Logger::info("Registering gRPC service initializer: " + initializer->getServiceName());
         grpcServiceInitializers.push_back(std::move(initializer));
     }
 }
 
 bool ApplicationManager::initializeGrpcServices() {
     if (!grpcServer) {
-        Logger::error("无法初始化gRPC服务: 服务器未创建");
+        Logger::error("Cannot initialize gRPC services: server not created");
         return false;
     }
 
@@ -302,14 +302,14 @@ bool ApplicationManager::initializeGrpcServices() {
 
     for (const auto& initializer : grpcServiceInitializers) {
         if (initializer) {
-            Logger::info("初始化gRPC服务: " + initializer->getServiceName());
+            Logger::info("Initializing gRPC service: " + initializer->getServiceName());
 
             if (!initializer->initialize(grpcServer.get())) {
-                Logger::error("初始化gRPC服务失败: " + initializer->getServiceName());
+                Logger::error("Failed to initialize gRPC service: " + initializer->getServiceName());
                 allSucceeded = false;
                 // 继续初始化其他服务，即使一个失败
             } else {
-                Logger::info("成功初始化gRPC服务: " + initializer->getServiceName());
+                Logger::info("Successfully initialized gRPC service: " + initializer->getServiceName());
             }
         }
     }
@@ -318,8 +318,8 @@ bool ApplicationManager::initializeGrpcServices() {
 }
 
 bool ApplicationManager::registerGrpcServicesFromRegistry() {
-    return ExceptionHandler::execute("从注册表注册gRPC服务", [&]() {
-        Logger::info("从注册表注册gRPC服务");
+    return ExceptionHandler::execute("Registering gRPC services from registry", [&]() {
+        Logger::info("Registering gRPC services from registry");
         auto& registry = GrpcServiceRegistry::getInstance();
 
         // 使用工厂初始化所有服务
@@ -331,40 +331,40 @@ bool ApplicationManager::registerGrpcServicesFromRegistry() {
 }
 
 bool ApplicationManager::initializeGrpcServer() {
-    return ExceptionHandler::execute("初始化gRPC服务器", [&]() {
+    return ExceptionHandler::execute("Initializing gRPC server", [&]() {
         std::string grpcAddress = getGrpcServerAddress();
-        Logger::info("正在初始化gRPC服务器，地址: " + grpcAddress);
+        Logger::info("Initializing gRPC server, address: " + grpcAddress);
 
         // 创建gRPC服务器
         grpcServer = std::make_unique<GrpcServer>(grpcAddress);
 
         // 初始化注册的服务
         if (!initializeGrpcServices()) {
-            Logger::warning("部分gRPC服务初始化失败");
+            Logger::warning("Some gRPC services failed to initialize");
         }
 
         // 启动服务器
         if (!grpcServer->start()) {
-            Logger::warning("在 " + grpcAddress + " 上启动gRPC服务器失败，将继续运行但不包含gRPC功能");
+            Logger::warning("Failed to start gRPC server at " + grpcAddress + ", will continue running without gRPC functionality");
             return false;
         }
 
-        Logger::info("gRPC服务器在 " + grpcAddress + " 上成功启动");
+        Logger::info("gRPC server successfully started at " + grpcAddress);
         return true;
     });
 }
 
 bool ApplicationManager::initializeRoutes() {
-    return ExceptionHandler::execute("初始化路由", [&]() {
+    return ExceptionHandler::execute("Initializing routes", [&]() {
         // 初始化所有路由组
         RouteInitializer::initializeRoutes();
-        Logger::info("路由初始化成功");
+        Logger::info("Routes initialized successfully");
         return true;
     });
 }
 
 bool ApplicationManager::startHttpServer() {
-    return ExceptionHandler::execute("启动HTTP服务器", [&]() {
+    return ExceptionHandler::execute("Starting HTTP server", [&]() {
         // 创建HTTP服务器
         httpServer = std::make_unique<HttpServer>(getHTTPServerConfig());
 
@@ -373,12 +373,12 @@ bool ApplicationManager::startHttpServer() {
 
         // 启动服务器
         if (!httpServer->start()) {
-            Logger::error("启动HTTP服务器失败");
+            Logger::error("Failed to start HTTP server");
             return false;
         }
 
-        Logger::info("HTTP服务器在 " + getHTTPServerConfig().host + ":" +
-                     std::to_string(getHTTPServerConfig().port) + " 上成功启动");
+        Logger::info("HTTP server successfully started at " + getHTTPServerConfig().host + ":" +
+                     std::to_string(getHTTPServerConfig().port));
         return true;
     });
 }

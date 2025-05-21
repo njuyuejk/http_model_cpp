@@ -25,13 +25,13 @@ bool GrpcServer::start() {
     std::lock_guard<std::mutex> lock(server_mutex_);
 
     if (running_) {
-        Logger::warning("gRPC服务器已在 " + server_address_ + " 上运行");
+        Logger::warning("gRPC server is already running at " + server_address_);
         return true;
     }
 
     // 验证至少注册了一个服务
     if (services_.empty()) {
-        Logger::error("无法启动gRPC服务器：未注册服务");
+        Logger::error("Unable to start gRPC server: no services registered");
         return false;
     }
 
@@ -40,16 +40,16 @@ bool GrpcServer::start() {
         server_ = builder_.BuildAndStart();
 
         if (!server_) {
-            Logger::error("在 " + server_address_ + " 上启动gRPC服务器失败");
+            Logger::error("Failed to start gRPC server at " + server_address_);
             return false;
         }
 
         running_ = true;
-        Logger::info("gRPC服务器在 " + server_address_ + " 上成功启动");
+        Logger::info("gRPC server successfully started at " + server_address_);
         return true;
     }
     catch (const std::exception& e) {
-        Logger::error("启动gRPC服务器时发生异常: " + std::string(e.what()));
+        Logger::error("Exception occurred while starting gRPC server: " + std::string(e.what()));
         return false;
     }
 }
@@ -61,7 +61,7 @@ void GrpcServer::stop() {
         return;
     }
 
-    Logger::info("正在停止 " + server_address_ + " 上的gRPC服务器");
+    Logger::info("Stopping gRPC server at " + server_address_);
 
     // 设置超时关闭
     constexpr int SHUTDOWN_TIMEOUT_SECONDS = 5;
@@ -75,7 +75,7 @@ void GrpcServer::stop() {
     // 服务器停止时清理服务
     services_.clear();
 
-    Logger::info("gRPC服务器已停止");
+    Logger::info("gRPC server stopped");
 }
 
 bool GrpcServer::isRunning() const {

@@ -19,7 +19,7 @@ AIModelServiceInitializer::~AIModelServiceInitializer() {
 
 bool AIModelServiceInitializer::initialize(GrpcServer* server) {
     if (!server) {
-        Logger::error("无法初始化AI模型服务: gRPC服务器指针为空");
+        Logger::error("Cannot initialize AI model service: gRPC server pointer is null");
         return false;
     }
 
@@ -31,16 +31,16 @@ bool AIModelServiceInitializer::initialize(GrpcServer* server) {
         bool result = server->registerService(serviceImpl_);
 
         if (!result) {
-            Logger::error("无法注册AI模型服务到gRPC服务器");
+            Logger::error("Unable to register AI model service to gRPC server");
             serviceImpl_.reset();
             return false;
         }
 
-        Logger::info("AI模型服务成功注册到gRPC服务器");
+        Logger::info("AI model service successfully registered to gRPC server");
         return true;
     }
     catch (const std::exception& e) {
-        Logger::error("初始化AI模型服务时发生异常: " + std::string(e.what()));
+        Logger::error("Exception occurred while initializing AI model service: " + std::string(e.what()));
         serviceImpl_.reset();
         return false;
     }

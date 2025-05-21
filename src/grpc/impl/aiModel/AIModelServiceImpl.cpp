@@ -17,7 +17,7 @@ grpc::Status AIModelServiceImpl::ProcessImage(
         grpc_service::ImageResponse* response) {
 
     try {
-        Logger::info("收到gRPC ProcessImage请求");
+        Logger::info("Received gRPC ProcessImage request");
 
         // 解码base64图像
         std::string base64_image = request->image_base64();
@@ -30,14 +30,14 @@ grpc::Status AIModelServiceImpl::ProcessImage(
         cv::Mat ori_img = cv::imdecode(decoded_data, cv::IMREAD_COLOR);
         if (ori_img.empty()) {
             response->set_success(false);
-            response->set_message("图像解码失败");
+            response->set_message("Image decoding failed");
             return grpc::Status::OK;
         }
 
         // 检查模型是否启用
         if (!appManager_.isModelEnabled(model_type)) {
             response->set_success(false);
-            response->set_message("模型未启用");
+            response->set_message("Model not enabled");
             return grpc::Status::OK;
         }
 
@@ -45,7 +45,7 @@ grpc::Status AIModelServiceImpl::ProcessImage(
         auto modelRef = appManager_.getSharedModelReference(model_type);
         if (!modelRef) {
             response->set_success(false);
-            response->set_message("未找到模型类型");
+            response->set_message("Model type not found");
             return grpc::Status::OK;
         }
 
@@ -53,7 +53,7 @@ grpc::Status AIModelServiceImpl::ProcessImage(
         modelRef->ori_img = ori_img;
         if (!modelRef->interf()) {
             response->set_success(false);
-            response->set_message("模型推理失败");
+            response->set_message("Model inference failed");
             return grpc::Status::OK;
         }
 
@@ -67,7 +67,7 @@ grpc::Status AIModelServiceImpl::ProcessImage(
 
         // 填充响应
         response->set_success(true);
-        response->set_message("处理成功");
+        response->set_message("Processing successful");
 
         // 添加检测结果
         for (const auto& inner_vec : results_vector) {
@@ -89,12 +89,12 @@ grpc::Status AIModelServiceImpl::ProcessImage(
             response->add_plate_results(plate);
         }
 
-        Logger::info("gRPC ProcessImage处理成功完成");
+        Logger::info("gRPC ProcessImage processing successfully completed");
         return grpc::Status::OK;
     } catch (const std::exception& e) {
-        Logger::error("gRPC ProcessImage错误: " + std::string(e.what()));
+        Logger::error("gRPC ProcessImage error: " + std::string(e.what()));
         response->set_success(false);
-        response->set_message("错误: " + std::string(e.what()));
+        response->set_message("error: " + std::string(e.what()));
         return grpc::Status(grpc::StatusCode::INTERNAL, e.what());
     }
 }
@@ -105,7 +105,7 @@ grpc::Status AIModelServiceImpl::ControlModel(
         grpc_service::ModelControlResponse* response) {
 
     try {
-        Logger::info("收到gRPC ControlModel请求");
+        Logger::info("Received gRPC ControlModel request");
 
         std::string model_name = request->model_name();
         int model_type = request->model_type();
@@ -118,7 +118,7 @@ grpc::Status AIModelServiceImpl::ControlModel(
             response->set_success(false);
             response->set_model_name(model_name);
             response->set_enabled(false);
-            Logger::warning("未找到模型: model_type=" + std::to_string(model_type));
+            Logger::warning("Model not found: model_type=" + std::to_string(model_type));
             return grpc::Status(grpc::StatusCode::NOT_FOUND, "未找到模型");
         }
 
@@ -129,13 +129,13 @@ grpc::Status AIModelServiceImpl::ControlModel(
         response->set_model_name(model_name);
         response->set_enabled(current_status);
 
-        Logger::info("模型控制成功: model_type=" +
+        Logger::info("Model control successful: model_type=" +
                      std::to_string(model_type) + ", enabled=" +
                      (current_status ? "true" : "false"));
 
         return grpc::Status::OK;
     } catch (const std::exception& e) {
-        Logger::error("gRPC ControlModel错误: " + std::string(e.what()));
+        Logger::error("gRPC ControlModel error: " + std::string(e.what()));
         response->set_success(false);
         response->set_enabled(false);
         return grpc::Status(grpc::StatusCode::INTERNAL, e.what());
