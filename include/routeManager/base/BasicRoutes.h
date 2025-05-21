@@ -21,7 +21,7 @@ public:
 
     void registerRoutes(HttpServer& server) override {
         // 注册根路由
-        server.addGet("/", Handlers::handle_root, "首页");
+        server.addGet("/", Handlers::handle_root, "根路径");
 
         // 配置错误处理
         server.setErrorHandler([](const httplib::Request& req, httplib::Response& res) {
