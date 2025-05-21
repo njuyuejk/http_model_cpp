@@ -5,11 +5,11 @@
 #ifndef ROUTE_INITIALIZER_H
 #define ROUTE_INITIALIZER_H
 
-#include "RouteManager.h"
-#include "routeManager/BasicRoutes.h"
-#include "routeManager/ModelConfigRoutes.h"
-#include "routeManager/ApiRoutes.h"
-#include "ModelRoutes.h"
+#include "routeManager/RouteManager.h"
+#include "routeManager/base/BasicRoutes.h"
+#include "routeManager/route/ModelConfigRoutes.h"
+#include "routeManager/route/ApiRoutes.h"
+#include "routeManager/route/ModelRoutes.h"
 
 /**
  * @brief 路由初始化器

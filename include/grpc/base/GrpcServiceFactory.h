@@ -5,7 +5,7 @@
 #ifndef GRPC_SERVICE_FACTORY_H
 #define GRPC_SERVICE_FACTORY_H
 
-#include "grpc/GrpcServiceRegistry.h"
+#include "GrpcServiceRegistry.h"
 
 class ApplicationManager;
 

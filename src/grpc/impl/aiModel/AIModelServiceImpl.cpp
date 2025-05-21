@@ -2,7 +2,7 @@
 // Created by YJK on 2025/5/20.
 //
 
-#include "grpc/AIModelServiceImpl.h"
+#include "grpc/impl/aiModel/AIModelServiceImpl.h"
 #include "app/ApplicationManager.h"
 #include "common/Logger.h"
 #include "common/base64.h"

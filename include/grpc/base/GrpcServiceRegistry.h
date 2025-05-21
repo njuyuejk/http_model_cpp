@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 #include <string>
-#include "grpc/GrpcServiceInitializerBase.h"
+#include "grpc/base/GrpcServiceInitializerBase.h"
 
 class ApplicationManager;
 

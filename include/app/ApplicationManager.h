@@ -7,7 +7,7 @@
 
 #include "common/Logger.h"
 #include "common/StreamConfig.h"
-#include "AIService/rknnPool.h"
+#include "AIService/rknn/rknnPool.h"
 #include <string>
 #include <memory>
 #include <mutex>

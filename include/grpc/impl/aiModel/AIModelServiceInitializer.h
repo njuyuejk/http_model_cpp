@@ -5,7 +5,7 @@
 #ifndef HTTP_MODEL_AIMODELSERVICEINITIALIZER_H
 #define HTTP_MODEL_AIMODELSERVICEINITIALIZER_H
 
-#include "grpc/GrpcServiceInitializerBase.h"
+#include "grpc/base/GrpcServiceInitializerBase.h"
 #include "app/ApplicationManager.h"
 
 // 前向声明减少头文件依赖

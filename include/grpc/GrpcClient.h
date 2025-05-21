@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 #include <grpcpp/grpcpp.h>
-#include "grpc_service.grpc.pb.h"
+#include "grpc/message/grpc_service.grpc.pb.h"
 #include <grpcpp/create_channel.h>
 #include <grpcpp/security/credentials.h>
 

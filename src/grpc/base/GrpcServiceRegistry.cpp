@@ -2,7 +2,7 @@
 // Created by YJK on 2025/5/21.
 //
 
-#include "grpc/GrpcServiceRegistry.h"
+#include "grpc/base/GrpcServiceRegistry.h"
 #include "app/ApplicationManager.h"
 #include "common/Logger.h"
 

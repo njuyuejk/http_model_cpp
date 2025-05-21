@@ -2,9 +2,9 @@
 // Created by YJK on 2025/5/21.
 //
 
-#include "grpc/AIModelServiceInitializer.h"
+#include "grpc/impl/aiModel/AIModelServiceInitializer.h"
 #include "grpc/GrpcServer.h"
-#include "grpc/AIModelServiceImpl.h"
+#include "grpc/impl/aiModel/AIModelServiceImpl.h"
 #include "common/Logger.h"
 
 AIModelServiceInitializer::AIModelServiceInitializer(ApplicationManager& appManager)

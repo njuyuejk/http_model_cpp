@@ -7,10 +7,10 @@
 #include "grpc/GrpcServer.h"
 #include "routeManager/HttpServer.h"
 #include "routeManager/RouteManager.h"
-#include "routeManager/RouteInitializer.h"
-#include "grpc/GrpcServiceInitializerBase.h"
-#include "grpc/GrpcServiceRegistry.h"
-#include "grpc/GrpcServiceFactory.h"
+#include "routeManager/base/RouteInitializer.h"
+#include "grpc/base/GrpcServiceInitializerBase.h"
+#include "grpc/base/GrpcServiceRegistry.h"
+#include "grpc/base/GrpcServiceFactory.h"
 
 // 初始化静态成员
 ApplicationManager* ApplicationManager::instance = nullptr;

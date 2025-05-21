@@ -6,7 +6,7 @@
 #define AI_MODEL_SERVICE_IMPL_H
 
 #include <grpcpp/grpcpp.h>
-#include "grpc_service.grpc.pb.h"
+#include "grpc/message/grpc_service.grpc.pb.h"
 
 // Forward declaration
 class ApplicationManager;

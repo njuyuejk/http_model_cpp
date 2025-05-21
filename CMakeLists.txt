@@ -71,11 +71,11 @@ set(route
         src/routeManager/HttpServer.cpp
         include/routeManager/RouteManager.h
         src/routeManager/RouteManager.cpp
-        include/routeManager/BasicRoutes.h
-        include/routeManager/ModelConfigRoutes.h
-        include/routeManager/ApiRoutes.h
-        include/routeManager/RouteInitializer.h
-        include/routeManager/ModelRoutes.h
+        include/routeManager/base/BasicRoutes.h
+        include/routeManager/route/ModelConfigRoutes.h
+        include/routeManager/route/ApiRoutes.h
+        include/routeManager/base/RouteInitializer.h
+        include/routeManager/route/ModelRoutes.h
 )
 
 set(handlers
@@ -94,47 +94,47 @@ set(exception
 )
 
 set(ai_service
-        include/AIService/postprocess.h
-        include/AIService/rknnPool.h
-        src/AIService/postprocess.cpp
-        src/AIService/rknnPool.cpp
-        include/AIService/preprocess.h
-        src/AIService/preprocess.cpp
-        include/AIService/lprnetPostprocess.h
-        src/AIService/lprnetPostprocess.cpp
-        src/AIService/lprnetPool.cpp
-        include/AIService/lprnetPool.h
-        include/AIService/lprnetPool.h
-        src/AIService/postprocess_p2.cpp
-        include/AIService/postprocess_p2.h
-        include/AIService/postprocess_pose.h
-        src/AIService/postprocess_pose.cpp
-        include/AIService/rknnPool_Pose.h
-        src/AIService/rknnPool_Pose.cpp
-        include/AIService/postprocess_seg.h
-        src/AIService/postprocess_seg.cpp
-        include/AIService/rknnPool_Seg.h
-        src/AIService/rknnPool_Seg.cpp
+        include/AIService/postprocess/postprocess.h
+        include/AIService/rknn/rknnPool.h
+        src/AIService/postprocess/postprocess.cpp
+        src/AIService/rknn/rknnPool.cpp
+        include/AIService/preprocess/preprocess.h
+        src/AIService/preprocess/preprocess.cpp
+        include/AIService/postprocess/lprnetPostprocess.h
+        src/AIService/postprocess/lprnetPostprocess.cpp
+        src/AIService/rknn/lprnetPool.cpp
+        include/AIService/rknn/lprnetPool.h
+        include/AIService/rknn/lprnetPool.h
+        src/AIService/postprocess/postprocess_p2.cpp
+        include/AIService/postprocess/postprocess_p2.h
+        include/AIService/postprocess/postprocess_pose.h
+        src/AIService/postprocess/postprocess_pose.cpp
+        include/AIService/rknn/rknnPool_Pose.h
+        src/AIService/rknn/rknnPool_Pose.cpp
+        include/AIService/postprocess/postprocess_seg.h
+        src/AIService/postprocess/postprocess_seg.cpp
+        include/AIService/rknn/rknnPool_Seg.h
+        src/AIService/rknn/rknnPool_Seg.cpp
 )
 
 set(grpc
-        include/grpc/grpc_service.pb.h
-        src/grpc/grpc_service.pb.cc
+        include/grpc/message/grpc_service.pb.h
+        src/grpc/message/grpc_service.pb.cc
         src/grpc/GrpcServer.cpp
         include/grpc/GrpcServer.h
         src/grpc/GrpcClient.cpp
         include/grpc/GrpcClient.h
-        src/grpc/AIModelServiceImpl.cpp
-        include/grpc/AIModelServiceImpl.h
-        include/grpc/grpc_service.grpc.pb.h
-        src/grpc/grpc_service.grpc.pb.cc
-        include/grpc/GrpcServiceInitializerBase.h
-        src/grpc/AIModelServiceInitializer.cpp
-        include/grpc/AIModelServiceInitializer.h
-        src/grpc/GrpcServiceRegistry.cpp
-        include/grpc/GrpcServiceRegistry.h
-        src/grpc/GrpcServiceFactory.cpp
-        include/grpc/GrpcServiceFactory.h
+        src/grpc/impl/aiModel/AIModelServiceImpl.cpp
+        include/grpc/impl/aiModel/AIModelServiceImpl.h
+        include/grpc/message/grpc_service.grpc.pb.h
+        src/grpc/message/grpc_service.grpc.pb.cc
+        include/grpc/base/GrpcServiceInitializerBase.h
+        src/grpc/impl/aiModel/AIModelServiceInitializer.cpp
+        include/grpc/impl/aiModel/AIModelServiceInitializer.h
+        src/grpc/base/GrpcServiceRegistry.cpp
+        include/grpc/base/GrpcServiceRegistry.h
+        src/grpc/base/GrpcServiceFactory.cpp
+        include/grpc/base/GrpcServiceFactory.h
 )
 
 # 所有库源文件

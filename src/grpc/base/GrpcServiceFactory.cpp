@@ -2,9 +2,9 @@
 // Created by YJK on 2025/5/21.
 //
 
-#include "grpc/GrpcServiceFactory.h"
+#include "grpc/base/GrpcServiceFactory.h"
 #include "app/ApplicationManager.h"
-#include "grpc/AIModelServiceInitializer.h"
+#include "grpc/impl/aiModel/AIModelServiceInitializer.h"
 #include "common/Logger.h"
 
 // 在此处添加其他服务初始化器头文件
