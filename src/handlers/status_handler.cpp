@@ -6,6 +6,7 @@
 #include "nlohmann/json.hpp"
 #include "exception/GlobalExceptionHandler.h"
 #include "app/ApplicationManager.h"
+#include "grpc/GrpcServer.h"
 
 using json = nlohmann::json;
 
