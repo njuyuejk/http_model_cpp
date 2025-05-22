@@ -12,6 +12,13 @@
     "grpc_server": {
       "host": "0.0.0.0",
       "port": 50051
+    },
+    "concurrency": {
+      "max_concurrent_requests": 20,
+      "model_pool_size": 5,
+      "request_timeout_ms": 30000,
+      "model_acquire_timeout_ms": 10000,
+      "enable_concurrency_monitoring": true
     }
   },
   "model": [

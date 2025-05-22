@@ -76,6 +76,7 @@ set(route
         include/routeManager/route/ApiRoutes.h
         include/routeManager/base/RouteInitializer.h
         include/routeManager/route/ModelRoutes.h
+        include/routeManager/route/StatusRoutes.h
 )
 
 set(handlers
@@ -85,6 +86,8 @@ set(handlers
         include/handlers/modelConfig_handler.h
         src/handlers/api_handler.cpp
         include/handlers/api_handler.h
+        include/handlers/status_handler.h
+        src/handlers/status_handler.cpp
 )
 
 set(exception
@@ -115,6 +118,8 @@ set(ai_service
         src/AIService/postprocess/postprocess_seg.cpp
         include/AIService/rknn/rknnPool_Seg.h
         src/AIService/rknn/rknnPool_Seg.cpp
+        src/AIService/ModelPool.cpp
+        include/AIService/ModelPool.h
 )
 
 set(grpc

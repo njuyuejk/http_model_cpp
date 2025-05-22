@@ -21,6 +21,8 @@ HTTPServerConfig AppConfig::httpServerConfig;
 
 GRPCServerConfig AppConfig::grpcServerConfig;
 
+ConcurrencyServerConfig AppConfig::concurrencyConfig;
+
 // ModelConfig 实现
 ModelConfig ModelConfig::fromJson(const nlohmann::json& j) {
     ModelConfig config;
@@ -93,6 +95,14 @@ bool AppConfig::loadFromFile(const std::string& configFilePath) {
                 grpcServerConfig = GRPCServerConfig::fromJson(general["grpc_server"]);
                 Logger::info("Loading gRPC server configuration: " + grpcServerConfig.host + ":" +
                              std::to_string(grpcServerConfig.port));
+            }
+
+            // 加载并发配置
+            if (general.contains("concurrency") && general["concurrency"].is_object()) {
+                concurrencyConfig = ConcurrencyServerConfig::fromJson(general["concurrency"]);
+                Logger::info("Loading concurrency configuration: pool_size=" +
+                             std::to_string(concurrencyConfig.modelPoolSize) +
+                             ", max_concurrent=" + std::to_string(concurrencyConfig.maxConcurrentRequests));
             }
         }
 
@@ -185,6 +195,10 @@ bool AppConfig::saveToFile(const std::string& configFilePath) {
         Logger::error("Error saving configuration file: " + std::string(e.what()));
         return false;
     }
+}
+
+const ConcurrencyServerConfig& AppConfig::getConcurrencyConfig() {
+    return concurrencyConfig;
 }
 
 // HTTP服务器配置实现
@@ -322,4 +336,35 @@ nlohmann::json GRPCServerConfig::toJson() const {
 // 添加getter实现
 const GRPCServerConfig& AppConfig::getGRPCServerConfig() {
     return grpcServerConfig;
+}
+
+ConcurrencyServerConfig ConcurrencyServerConfig::fromJson(const nlohmann::json& j) {
+    ConcurrencyServerConfig config;
+
+    if (j.contains("max_concurrent_requests") && j["max_concurrent_requests"].is_number_integer())
+        config.maxConcurrentRequests = j["max_concurrent_requests"];
+
+    if (j.contains("model_pool_size") && j["model_pool_size"].is_number_integer())
+        config.modelPoolSize = j["model_pool_size"];
+
+    if (j.contains("request_timeout_ms") && j["request_timeout_ms"].is_number_integer())
+        config.requestTimeoutMs = j["request_timeout_ms"];
+
+    if (j.contains("model_acquire_timeout_ms") && j["model_acquire_timeout_ms"].is_number_integer())
+        config.modelAcquireTimeoutMs = j["model_acquire_timeout_ms"];
+
+    if (j.contains("enable_concurrency_monitoring") && j["enable_concurrency_monitoring"].is_boolean())
+        config.enableConcurrencyMonitoring = j["enable_concurrency_monitoring"];
+
+    return config;
+}
+
+nlohmann::json ConcurrencyServerConfig::toJson() const {
+    nlohmann::json j;
+    j["max_concurrent_requests"] = maxConcurrentRequests;
+    j["model_pool_size"] = modelPoolSize;
+    j["request_timeout_ms"] = requestTimeoutMs;
+    j["model_acquire_timeout_ms"] = modelAcquireTimeoutMs;
+    j["enable_concurrency_monitoring"] = enableConcurrencyMonitoring;
+    return j;
 }

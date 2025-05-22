@@ -10,6 +10,7 @@
 #include "routeManager/route/ModelConfigRoutes.h"
 #include "routeManager/route/ApiRoutes.h"
 #include "routeManager/route/ModelRoutes.h"
+#include "routeManager/route/StatusRoutes.h"
 
 /**
  * @brief 路由初始化器
@@ -34,6 +35,9 @@ public:
 
         // 注册模型配置路由组
         routeManager.addGroup(std::make_shared<ModelConfigRoutes>());
+
+        // 注册状态路由
+        routeManager.addGroup(std::make_shared<StatusRoutes>());
 
         // 可以在这里添加更多路由组
         // 例如:

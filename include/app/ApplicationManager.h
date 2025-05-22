@@ -7,22 +7,29 @@
 
 #include "common/Logger.h"
 #include "common/StreamConfig.h"
-#include "AIService/rknn/rknnPool.h"
+#include "AIService/ModelPool.h"
 #include <string>
 #include <memory>
 #include <mutex>
 #include <vector>
+#include <unordered_map>
+#include <shared_mutex>
+#include <condition_variable>
 
 // Forward declarations
 class GrpcServer;
 class HttpServer;
 class GrpcServiceInitializerBase;
 
-struct SingleModelEntry {
-    std::unique_ptr<rknn_lite> singleRKModel; // 单个模型
-    std::string modelName; // 模型名称
-    int modelType; // 模型类型
-    bool isEnabled; // 模型可用
+/**
+ * @brief 并发配置结构体
+ */
+struct ConcurrencyConfig {
+    int maxConcurrentRequests = 10;
+    int modelPoolSize = 3;
+    int requestTimeoutMs = 30000;
+    int modelAcquireTimeoutMs = 5000;
+    bool enableConcurrencyMonitoring = true;
 };
 
 /**
@@ -53,18 +60,22 @@ private:
     // gRPC服务初始化器集合
     std::vector<std::unique_ptr<GrpcServiceInitializerBase>> grpcServiceInitializers;
 
-    // 初始化gRPC服务器
+    // 模型池管理
+    std::unordered_map<int, std::unique_ptr<ModelPool>> modelPools_;
+    mutable std::shared_mutex modelPoolsMutex_;
+
+    // 并发监控
+    std::unique_ptr<ConcurrencyMonitor> httpMonitor_;
+    std::unique_ptr<ConcurrencyMonitor> grpcMonitor_;
+    ConcurrencyConfig concurrencyConfig_;
+
+    // 初始化方法
     bool initializeGrpcServer();
-
-    // 初始化HTTP路由
     bool initializeRoutes();
-
-    // 配置并启动HTTP服务器
     bool startHttpServer();
 
-public:
-    // AI处理部分
-    std::vector<std::unique_ptr<SingleModelEntry>> singleModelPools_;
+    // 记录初始化摘要 - 添加这一行
+    void logInitializationSummary();
 
 public:
     // 禁止拷贝和移动
@@ -98,10 +109,10 @@ public:
     const HTTPServerConfig& getHTTPServerConfig() const;
 
     /**
-     * @brief 初始化模型
+     * @brief 初始化模型池
      * @return 初始化是否成功
      */
-    bool initializeModels();
+    bool initializeModelPools();
 
     // 获取格式化为host:port的gRPC服务器地址
     std::string getGrpcServerAddress() const;
@@ -112,55 +123,101 @@ public:
     // 获取gRPC服务器实例
     GrpcServer* getGrpcServer() const;
 
-    // 模型访问方法 - 共享指针实现
+    // 模型池访问方法
 
     /**
-     * @brief 按类型获取模型的共享引用
+     * @brief 使用模型池执行推理
      * @param modelType 模型类型
-     * @return 模型的共享引用，若未找到则返回nullptr
+     * @param imageData 图像数据
+     * @param results 检测结果
+     * @param plateResults 车牌结果
+     * @param timeoutMs 超时时间
+     * @return 执行是否成功
      */
-    std::shared_ptr<rknn_lite> getSharedModelReference(int modelType) const;
+    bool executeModelInference(int modelType,
+                               const cv::Mat& imageData,
+                               std::vector<std::vector<std::any>>& results,
+                               std::vector<std::string>& plateResults,
+                               int timeoutMs = 0);
 
     /**
-     * @brief 按名称获取模型的共享引用
-     * @param modelName 模型名称
-     * @return 模型的共享引用，若未找到则返回nullptr
-     */
-    std::shared_ptr<rknn_lite> getSharedModelByName(const std::string& modelName) const;
-
-    /**
-     * @brief 获取指定类型模型的可用状态
-     * @param modelType 模型类型
-     * @return 模型是否可用
-     */
-    bool isModelEnabled(int modelType) const;
-
-    /**
-     * @brief 设置指定类型模型的可用状态
+     * @brief 设置模型池状态
      * @param modelType 模型类型
      * @param enabled 是否启用
      * @return 设置是否成功
      */
     bool setModelEnabled(int modelType, bool enabled);
 
+    /**
+     * @brief 检查模型池状态
+     * @param modelType 模型类型
+     * @return 模型是否启用
+     */
+    bool isModelEnabled(int modelType) const;
+
+    /**
+     * @brief 获取模型池状态
+     * @param modelType 模型类型
+     * @return 模型池状态
+     */
+    ModelPool::PoolStatus getModelPoolStatus(int modelType) const;
+
+    /**
+     * @brief 获取所有模型池状态
+     * @return 所有模型池状态映射
+     */
+    std::unordered_map<int, ModelPool::PoolStatus> getAllModelPoolStatus() const;
+
+    // 并发监控方法
+
+    /**
+     * @brief 获取HTTP并发统计
+     */
+    ConcurrencyMonitor::Stats getHttpConcurrencyStats() const;
+
+    /**
+     * @brief 获取gRPC并发统计
+     */
+    ConcurrencyMonitor::Stats getGrpcConcurrencyStats() const;
+
+    /**
+     * @brief 开始HTTP请求监控
+     */
+    void startHttpRequest();
+
+    /**
+     * @brief 完成HTTP请求监控
+     */
+    void completeHttpRequest();
+
+    /**
+     * @brief HTTP请求失败监控
+     */
+    void failHttpRequest();
+
+    /**
+     * @brief 开始gRPC请求监控
+     */
+    void startGrpcRequest();
+
+    /**
+     * @brief 完成gRPC请求监控
+     */
+    void completeGrpcRequest();
+
+    /**
+     * @brief gRPC请求失败监控
+     */
+    void failGrpcRequest();
+
+    /**
+     * @brief 获取并发配置
+     */
+    const ConcurrencyConfig& getConcurrencyConfig() const;
+
     // gRPC服务注册方法
-
-    /**
-     * @brief 注册gRPC服务初始化器
-     * @param initializer 服务初始化器
-     */
     void registerGrpcServiceInitializer(std::unique_ptr<GrpcServiceInitializerBase> initializer);
-
-    /**
-     * @brief 初始化所有注册的gRPC服务
-     * @return 初始化是否成功
-     */
     bool initializeGrpcServices();
-
-    /**
-     * @brief 从注册表注册所有gRPC服务
-     * @return 注册是否成功
-     */
     bool registerGrpcServicesFromRegistry();
 };
 

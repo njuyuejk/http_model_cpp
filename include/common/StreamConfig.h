@@ -64,6 +64,23 @@ struct GRPCServerConfig {
     nlohmann::json toJson() const;
 };
 
+/*
+ * @brief 并发配置
+ * */
+struct ConcurrencyServerConfig {
+    int maxConcurrentRequests = 10;
+    int modelPoolSize = 3;
+    int requestTimeoutMs = 30000;
+    int modelAcquireTimeoutMs = 5000;
+    bool enableConcurrencyMonitoring = true;
+
+    ConcurrencyServerConfig() = default;
+
+    static ConcurrencyServerConfig fromJson(const nlohmann::json& j);
+    nlohmann::json toJson() const;
+};
+
+
 
 /**
  * @brief 应用配置类
@@ -148,6 +165,11 @@ public:
 
     static const GRPCServerConfig& getGRPCServerConfig();
 
+    /**
+     * @brief 获取并发配置
+     */
+    static const ConcurrencyServerConfig& getConcurrencyConfig();
+
 private:
     static bool logToFile;
     static std::string logFilePath;
@@ -158,6 +180,7 @@ private:
     static HTTPServerConfig httpServerConfig;
     static std::vector<ModelConfig> modelConfigs;
     static GRPCServerConfig grpcServerConfig;
+    static ConcurrencyServerConfig concurrencyConfig;
 };
 
 #endif // STREAM_CONFIG_H
