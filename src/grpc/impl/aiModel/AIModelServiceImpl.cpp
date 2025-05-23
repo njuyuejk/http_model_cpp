@@ -51,7 +51,12 @@ grpc::Status AIModelServiceImpl::ProcessImage(
         std::vector<unsigned char> decoded_data;
         try {
             std::string decoded_str = base64_decode(base64_image);
-            decoded_data = std::vector<unsigned char>(decoded_str.begin(), decoded_str.end());
+//            decoded_data = std::vector<unsigned char>(decoded_str.begin(), decoded_str.end());
+            decoded_data.reserve(decoded_str.size());
+            decoded_data.assign(
+                    std::make_move_iterator(decoded_str.begin()),
+                    std::make_move_iterator(decoded_str.end())
+            );
         } catch (const std::exception& e) {
             appManager_.failGrpcRequest();
             response->set_success(false);
@@ -143,6 +148,12 @@ grpc::Status AIModelServiceImpl::ProcessImage(
 
         // 完成gRPC请求监控
         appManager_.completeGrpcRequest();
+
+        results_vector.clear();
+        plate_results_vector.clear();
+        std::vector<std::vector<std::any>>().swap(results_vector);
+        std::vector<std::string>().swap(plate_results_vector);
+
         return grpc::Status::OK;
 
     } catch (const std::exception& e) {

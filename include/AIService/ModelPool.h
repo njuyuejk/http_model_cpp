@@ -82,6 +82,11 @@ public:
      */
     void shutdown();
 
+    /*
+     * @brief 模型资源清理
+     * */
+    void clearModelResources(std::shared_ptr<rknn_lite> model);
+
 private:
     mutable std::mutex poolMutex_;
     std::condition_variable condition_;
@@ -114,6 +119,7 @@ public:
 
     ~ModelAcquirer() {
         if (model_) {
+            pool_.clearModelResources(model_);
             pool_.releaseModel(model_);
         }
     }

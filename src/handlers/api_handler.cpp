@@ -178,7 +178,12 @@ void Handlers::handle_api_model_process(const httplib::Request& req, httplib::Re
             std::vector<unsigned char> decoded_data;
             try {
                 std::string decoded_str = base64_decode(message);
-                decoded_data = std::vector<unsigned char>(decoded_str.begin(), decoded_str.end());
+//                decoded_data = std::vector<unsigned char>(decoded_str.begin(), decoded_str.end());
+                decoded_data.reserve(decoded_str.size());
+                decoded_data.assign(
+                        std::make_move_iterator(decoded_str.begin()),
+                        std::make_move_iterator(decoded_str.end())
+                );
             } catch (const std::exception& e) {
                 appManager.failHttpRequest();
                 throw APIException("Base64 decode failed: " + std::string(e.what()), 400);
@@ -203,6 +208,8 @@ void Handlers::handle_api_model_process(const httplib::Request& req, httplib::Re
                                                             results_vector,
                                                             plateResults_vector,
                                                             timeout);
+
+            ori_img.release();
 
             if (!success) {
                 appManager.failHttpRequest();
@@ -230,36 +237,52 @@ void Handlers::handle_api_model_process(const httplib::Request& req, httplib::Re
                 for (const auto& item : inner_vec) {
                     inner_json.push_back(any_to_json(item));
                 }
-                json_data.push_back(inner_json);
+                json_data.push_back(std::move(inner_json));
             }
 
             // 构建响应 JSON
-            json response_json = {
-                    {"status", "success"},
-                    {"message", "Processing completed successfully"},
-                    {"image_width", ori_img.cols},
-                    {"image_height", ori_img.rows},
-                    {"detect_results", json_data},
-                    {"plate_results", plateResults_vector},
-                    {"detect_type", modelType},
-                    {"processing_time_ms", duration.count()},
-                    {"received", true}
-            };
+            json response_json = json::object();
+            response_json["status"] = "success";
+            response_json["message"] = "Processing completed successfully";
+            response_json["processing_time_ms"] = duration.count();
+            response_json["detect_type"] = modelType;
+            response_json["received"] = true;
+
+            // 转换检测结果 - 使用移动语义减少拷贝
+            {
+                json json_data = json::array();
+
+                for (auto& inner_vec : results_vector) {
+                    json inner_json = json::array();
+
+                    for (auto& item : inner_vec) {
+                        inner_json.push_back(any_to_json(item));
+                    }
+                    json_data.push_back(std::move(inner_json));
+                }
+
+                response_json["detect_results"] = std::move(json_data);
+            }
+
+            // 添加车牌结果 - 使用移动语义
+            response_json["plate_results"] = std::move(plateResults_vector);
 
             // 添加并发状态信息（如果启用监控）
             if (appManager.getConcurrencyConfig().enableConcurrencyMonitoring) {
                 auto httpStats = appManager.getHttpConcurrencyStats();
                 auto poolStatus = appManager.getModelPoolStatus(modelType);
 
-                response_json["concurrency_info"] = {
-                        {"active_http_requests", httpStats.active},
-                        {"total_http_requests", httpStats.total},
-                        {"model_pool_status", {
-                                                         {"total_models", poolStatus.totalModels},
-                                                         {"available_models", poolStatus.availableModels},
-                                                         {"busy_models", poolStatus.busyModels}
-                                                 }}
-                };
+                json concurrency_info = json::object();
+                concurrency_info["active_http_requests"] = httpStats.active;
+                concurrency_info["total_http_requests"] = httpStats.total;
+
+                json pool_status = json::object();
+                pool_status["total_models"] = poolStatus.totalModels;
+                pool_status["available_models"] = poolStatus.availableModels;
+                pool_status["busy_models"] = poolStatus.busyModels;
+
+                concurrency_info["model_pool_status"] = std::move(pool_status);
+                response_json["concurrency_info"] = std::move(concurrency_info);
             }
 
             // 发送响应
@@ -271,6 +294,11 @@ void Handlers::handle_api_model_process(const httplib::Request& req, httplib::Re
 
             // 完成请求监控
             appManager.completeHttpRequest();
+
+            results_vector.clear();
+            plateResults_vector.clear();
+            std::vector<std::vector<std::any>>().swap(results_vector);
+            std::vector<std::string>().swap(plateResults_vector);
 
         } catch (...) {
             appManager.failHttpRequest();

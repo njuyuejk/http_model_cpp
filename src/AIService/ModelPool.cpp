@@ -111,6 +111,8 @@ void ModelPool::releaseModel(std::shared_ptr<rknn_lite> model) {
         return;
     }
 
+    clearModelResources(model);
+
     std::unique_lock<std::mutex> lock(poolMutex_);
     availableModels_.push(model);
     condition_.notify_one();
@@ -168,4 +170,15 @@ void ModelPool::shutdown() {
                  ", total acquires: " + std::to_string(totalAcquires_.load()) +
                  ", total releases: " + std::to_string(totalReleases_.load()) +
                  ", timeouts: " + std::to_string(timeoutCount_.load()));
+}
+
+void ModelPool::clearModelResources(std::shared_ptr<rknn_lite> model) {
+    if (model) {
+        // 清理模型内部资源
+        model->ori_img.release();
+        model->results_vector.clear();
+        model->results_vector.shrink_to_fit();
+        model->plateResults.clear();
+        model->plateResults.shrink_to_fit();
+    }
 }

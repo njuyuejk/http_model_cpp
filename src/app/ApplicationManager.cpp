@@ -377,11 +377,21 @@ bool ApplicationManager::executeModelInference(int modelType,
         }
 
         // 获取结果
-        results = acquirer->results_vector;
+//        results = acquirer->results_vector;
+        results = std::move(acquirer->results_vector);
 
         if (modelType == 1) {
             plateResults = acquirer->plateResults;
             Logger::debug("Retrieved " + std::to_string(plateResults.size()) + " plate results");
+        }
+
+        // 清空原始向量以释放内存
+        acquirer->results_vector.clear();
+        acquirer->results_vector.shrink_to_fit();
+
+        if (modelType == 1) {
+            acquirer->plateResults.clear();
+            acquirer->plateResults.shrink_to_fit();
         }
 
         Logger::debug("Model inference completed successfully for type: " +
