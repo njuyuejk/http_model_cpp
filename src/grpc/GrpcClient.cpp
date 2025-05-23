@@ -13,6 +13,9 @@ GrpcClient::GrpcClient(const std::string& server_address) {
         // 正确方式：直接使用 NewStub 返回的 unique_ptr
         stub_ = grpc_service::AIModelService::NewStub(channel);
 
+        // 创建状态监控服务存根
+        status_stub_ = grpc_service::StatusService::NewStub(channel);
+
         Logger::info("gRPC client initialized, server address: " + server_address);
     }
     catch (const std::exception& e) {
@@ -112,4 +115,18 @@ bool GrpcClient::controlModel(const std::string& model_name,
     current_status = response.enabled();
     Logger::info("gRPC ControlModel successfully completed");
     return true;
+}
+
+bool GrpcClient::getSystemStatus(grpc_service::SystemStatusResponse &status_response, std::string &error_message) {
+
+}
+
+bool GrpcClient::getModelPoolsStatus(grpc_service::ModelPoolsStatusResponse &pools_response, std::string &error_message,
+                                     int model_type) {
+
+}
+
+bool GrpcClient::getConcurrencyStats(grpc_service::ConcurrencyStatsResponse &stats_response,
+                                     std::string &error_message) {
+
 }

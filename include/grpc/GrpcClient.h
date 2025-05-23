@@ -32,8 +32,23 @@ public:
                       bool& current_status,
                       std::string& error_message);
 
+    // 状态监控服务方法
+    // 获取系统状态
+    bool getSystemStatus(grpc_service::SystemStatusResponse& status_response,
+                         std::string& error_message);
+
+    // 获取模型池状态
+    bool getModelPoolsStatus(grpc_service::ModelPoolsStatusResponse& pools_response,
+                             std::string& error_message,
+                             int model_type = -1);  // -1表示获取所有模型池
+
+    // 获取并发统计
+    bool getConcurrencyStats(grpc_service::ConcurrencyStatsResponse& stats_response,
+                             std::string& error_message);
+
 private:
     std::unique_ptr<grpc_service::AIModelService::Stub> stub_;
+    std::unique_ptr<grpc_service::StatusService::Stub> status_stub_;
 };
 
 #endif // GRPC_CLIENT_H

@@ -140,6 +140,10 @@ set(grpc
         include/grpc/base/GrpcServiceRegistry.h
         src/grpc/base/GrpcServiceFactory.cpp
         include/grpc/base/GrpcServiceFactory.h
+        src/grpc/impl/status/StatusServiceImpl.cpp
+        include/grpc/impl/status/StatusServiceImpl.h
+        src/grpc/impl/status/StatusServiceInitializer.cpp
+        include/grpc/impl/status/StatusServiceInitializer.h
 )
 
 # 所有库源文件
