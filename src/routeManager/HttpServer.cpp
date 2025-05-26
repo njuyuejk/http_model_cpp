@@ -97,14 +97,54 @@ bool HttpServer::start() {
         server.set_read_timeout(config.readTimeout);
     }
 
-    // 启动服务器（非阻塞方式）
-    if (!server.listen(config.host.c_str(), config.port)) {
-        Logger::get_instance().error("Failed to start server");
+    // 在新线程中启动服务器
+    serverStarted = false;
+    serverThread = std::make_unique<std::thread>([this]() {
+        // 标记服务器已启动
+        running = true;
+        serverStarted = true;
+
+        Logger::get_instance().info("HTTP server thread started, listening on " +
+                                    config.host + ":" + std::to_string(config.port));
+
+        // 这里会阻塞直到服务器停止
+        bool success = server.listen(config.host.c_str(), config.port);
+
+        if (!success) {
+            Logger::get_instance().error("HTTP server listen returned false");
+        }
+
+        running = false;
+        Logger::get_instance().info("HTTP server thread ended");
+    });
+
+    // 等待服务器启动
+    int waitCount = 0;
+    while (!serverStarted && waitCount < 50) { // 最多等待5秒
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        waitCount++;
+    }
+
+    if (serverStarted) {
+        Logger::get_instance().info("HTTP server successfully started");
+        return true;
+    } else {
+        Logger::get_instance().error("HTTP server failed to start within timeout");
+        if (serverThread && serverThread->joinable()) {
+            server.stop();
+            serverThread->join();
+        }
         return false;
     }
 
-    running = true;
-    return true;
+//    // 启动服务器（非阻塞方式）
+//    if (!server.listen(config.host.c_str(), config.port)) {
+//        Logger::get_instance().error("Failed to start server");
+//        return false;
+//    }
+//
+//    running = true;
+//    return true;
 }
 
 void HttpServer::stop() {
@@ -114,6 +154,11 @@ void HttpServer::stop() {
 
     Logger::get_instance().info("Stopping server");
     server.stop();
+
+    if (serverThread && serverThread->joinable()) {
+        serverThread->join();
+    }
+
     running = false;
 }
 
@@ -127,4 +172,10 @@ const HTTPServerConfig& HttpServer::getConfig() const {
 
 const std::vector<HttpServer::RouteInfo>& HttpServer::getRoutes() const {
     return routes;
+}
+
+void HttpServer::wait() {
+    if (serverThread && serverThread->joinable()) {
+        serverThread->join();
+    }
 }

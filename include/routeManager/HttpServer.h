@@ -43,6 +43,10 @@ private:
     // 存储所有路由信息
     std::vector<RouteInfo> routes;
 
+    // 添加线程相关成员
+    std::unique_ptr<std::thread> serverThread;
+    std::atomic<bool> serverStarted{false};
+
 public:
     /**
      * @brief 构造函数
@@ -147,6 +151,11 @@ public:
      * @return 路由信息列表
      */
     const std::vector<RouteInfo>& getRoutes() const;
+
+    /**
+     * @brief 等待服务器线程结束
+     */
+    void wait();
 };
 
 #endif // HTTP_SERVER_H
