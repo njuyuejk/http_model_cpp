@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(http_model)
+project(grpc_model)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -18,8 +18,8 @@ link_directories("${OPENCV_ROOT}/x64/mingw/lib")
 
 # 要链接的 FFmpeg 库
 set(OPENCV_LIBS
-        opencv_world470
         opencv_img_hash470
+        opencv_world470
 )
 
 
@@ -66,34 +66,9 @@ set(app
 
 )
 
-set(route
-        include/routeManager/HttpServer.h
-        src/routeManager/HttpServer.cpp
-        include/routeManager/RouteManager.h
-        src/routeManager/RouteManager.cpp
-        include/routeManager/base/BasicRoutes.h
-        include/routeManager/route/ModelConfigRoutes.h
-        include/routeManager/route/ApiRoutes.h
-        include/routeManager/base/RouteInitializer.h
-        include/routeManager/route/ModelRoutes.h
-        include/routeManager/route/StatusRoutes.h
-)
-
-set(handlers
-        src/handlers/root_handler.cpp
-        include/handlers/root_handler.h
-        src/handlers/modelConfig_handler.cpp
-        include/handlers/modelConfig_handler.h
-        src/handlers/api_handler.cpp
-        include/handlers/api_handler.h
-        include/handlers/status_handler.h
-        src/handlers/status_handler.cpp
-)
-
 set(exception
-        include/exception/GlobalExceptionHandler.h
         src/exception/GlobalExceptionHandler.cpp
-
+        include/exception/GlobalExceptionHandler.h
 )
 
 set(ai_service
@@ -148,16 +123,14 @@ set(grpc
 
 # 所有库源文件
 set(LIB_SOURCES
-        ${handlers}
         ${common}
         ${app}
-        ${route}
         ${exception}
         ${ai_service}
         ${grpc}
 )
 
-# 创建静态库 (可根据需要改为 SHARED 库)
+# 创建静态库 (可根据需要改为 SHARED 库
 add_library(58ai_http_processor SHARED ${LIB_SOURCES})
 
 # 为库设置属性
@@ -176,10 +149,10 @@ target_link_libraries(58ai_http_processor PRIVATE
 )
 
 
-add_executable(http_model main.cpp
+add_executable(grpc_model main.cpp
 )
 
 #add_library(DynLibName STATIC src/handlers/api_handler.cpp) # Output dynamic library.
 
-target_link_libraries(http_model PRIVATE 58ai_http_processor ${OpenCV_LIBS} ${RKNN_RT_LIB} ${RGA_LIB} ws2_32 pthread)
+target_link_libraries(grpc_model PRIVATE 58ai_http_processor ${OpenCV_LIBS} ${RKNN_RT_LIB} ${RGA_LIB} ws2_32 pthread)
 #target_link_libraries(http_model PRIVATE ws2_32 pthread)

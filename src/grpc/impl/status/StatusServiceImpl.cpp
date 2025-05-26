@@ -28,7 +28,6 @@ grpc::Status StatusServiceImpl::GetSystemStatus(
         response->set_message("System status retrieved successfully");
 
         // 系统信息
-        response->set_http_server_running(appManager_.getHttpServer() != nullptr);
         response->set_grpc_server_running(
                 appManager_.getGrpcServer() != nullptr &&
                 appManager_.getGrpcServer()->isRunning()
@@ -45,10 +44,6 @@ grpc::Status StatusServiceImpl::GetSystemStatus(
         response->set_request_timeout_ms(concurrencyConfig.requestTimeoutMs);
         response->set_model_acquire_timeout_ms(concurrencyConfig.modelAcquireTimeoutMs);
         response->set_monitoring_enabled(concurrencyConfig.enableConcurrencyMonitoring);
-
-        // HTTP统计
-        auto httpStats = appManager_.getHttpConcurrencyStats();
-        fillConcurrencyStats(httpStats, response->mutable_http_stats());
 
         // gRPC统计
         auto grpcStats = appManager_.getGrpcConcurrencyStats();
@@ -145,24 +140,20 @@ grpc::Status StatusServiceImpl::GetConcurrencyStats(
         response->set_timestamp(std::time(nullptr));
 
         // 获取统计数据
-        auto httpStats = appManager_.getHttpConcurrencyStats();
         auto grpcStats = appManager_.getGrpcConcurrencyStats();
-
-        // 填充HTTP统计
-        fillConcurrencyStats(httpStats, response->mutable_http_stats());
 
         // 填充gRPC统计
         fillConcurrencyStats(grpcStats, response->mutable_grpc_stats());
 
         // 填充综合统计
-        response->set_total_active(httpStats.active + grpcStats.active);
-        response->set_total_processed(httpStats.total + grpcStats.total);
-        response->set_total_failed(httpStats.failed + grpcStats.failed);
+        response->set_total_active(grpcStats.active);
+        response->set_total_processed(grpcStats.total);
+        response->set_total_failed(grpcStats.failed);
 
         double overallFailureRate = 0.0;
-        if ((httpStats.total + grpcStats.total) > 0) {
-            overallFailureRate = static_cast<double>(httpStats.failed + grpcStats.failed) /
-                                 (httpStats.total + grpcStats.total);
+        if ((grpcStats.total) > 0) {
+            overallFailureRate = static_cast<double>(grpcStats.failed) /
+                                 (grpcStats.total);
         }
         response->set_overall_failure_rate(overallFailureRate);
 

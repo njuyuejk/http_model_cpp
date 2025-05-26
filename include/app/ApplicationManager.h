@@ -18,7 +18,6 @@
 
 // Forward declarations
 class GrpcServer;
-class HttpServer;
 class GrpcServiceInitializerBase;
 
 /**
@@ -54,9 +53,6 @@ private:
     // gRPC服务器
     std::unique_ptr<GrpcServer> grpcServer;
 
-    // HTTP服务器
-    std::unique_ptr<HttpServer> httpServer;
-
     // gRPC服务初始化器集合
     std::vector<std::unique_ptr<GrpcServiceInitializerBase>> grpcServiceInitializers;
 
@@ -65,14 +61,11 @@ private:
     mutable std::shared_mutex modelPoolsMutex_;
 
     // 并发监控
-    std::unique_ptr<ConcurrencyMonitor> httpMonitor_;
     std::unique_ptr<ConcurrencyMonitor> grpcMonitor_;
     ConcurrencyConfig concurrencyConfig_;
 
     // 初始化方法
     bool initializeGrpcServer();
-    bool initializeRoutes();
-    bool startHttpServer();
 
     // 记录初始化摘要 - 添加这一行
     void logInitializationSummary();
@@ -103,12 +96,6 @@ public:
     void shutdown();
 
     /**
-     * @brief 获取HTTP服务器配置
-     * @return HTTP服务器配置引用
-     */
-    const HTTPServerConfig& getHTTPServerConfig() const;
-
-    /**
      * @brief 初始化模型池
      * @return 初始化是否成功
      */
@@ -116,9 +103,6 @@ public:
 
     // 获取格式化为host:port的gRPC服务器地址
     std::string getGrpcServerAddress() const;
-
-    // 获取HTTP服务器实例
-    HttpServer* getHttpServer() const;
 
     // 获取gRPC服务器实例
     GrpcServer* getGrpcServer() const;
@@ -171,29 +155,9 @@ public:
     // 并发监控方法
 
     /**
-     * @brief 获取HTTP并发统计
-     */
-    ConcurrencyMonitor::Stats getHttpConcurrencyStats() const;
-
-    /**
      * @brief 获取gRPC并发统计
      */
     ConcurrencyMonitor::Stats getGrpcConcurrencyStats() const;
-
-    /**
-     * @brief 开始HTTP请求监控
-     */
-    void startHttpRequest();
-
-    /**
-     * @brief 完成HTTP请求监控
-     */
-    void completeHttpRequest();
-
-    /**
-     * @brief HTTP请求失败监控
-     */
-    void failHttpRequest();
 
     /**
      * @brief 开始gRPC请求监控

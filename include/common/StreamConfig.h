@@ -37,22 +37,6 @@ struct ModelConfig {
     nlohmann::json toJson() const;
 };
 
-/**
- * @brief HTTP 服务器配置
- */
-struct HTTPServerConfig {
-    std::string host;
-    int port;
-    int connectionTimeout;
-    int readTimeout;
-
-    HTTPServerConfig() : host("127.0.0.1"), port(9000),
-                         connectionTimeout(5), readTimeout(5) {}
-
-    static HTTPServerConfig fromJson(const nlohmann::json& j);
-    nlohmann::json toJson() const;
-};
-
 // 添加到HTTPServerConfig结构体：
 struct GRPCServerConfig {
     std::string host;
@@ -125,12 +109,6 @@ public:
     static std::string getDirPath();
 
     /**
-     * @brief 获取HTTP服务器配置
-     * @return HTTP服务器配置
-     */
-    static const HTTPServerConfig& getHTTPServerConfig();
-
-    /**
      * @brief 获取全部模型配置
      * @return 模型配置列表
      */
@@ -177,7 +155,6 @@ private:
     static int threadPoolSize;
     static std::map<std::string, std::string> extraOptions;
     static std::string dirPath;
-    static HTTPServerConfig httpServerConfig;
     static std::vector<ModelConfig> modelConfigs;
     static GRPCServerConfig grpcServerConfig;
     static ConcurrencyServerConfig concurrencyConfig;

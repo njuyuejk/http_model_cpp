@@ -17,7 +17,6 @@ int AppConfig::logLevel = 1; // INFO
 int AppConfig::threadPoolSize = 4;
 std::map<std::string, std::string> AppConfig::extraOptions;
 std::string AppConfig::dirPath = "/root/data";
-HTTPServerConfig AppConfig::httpServerConfig;
 
 GRPCServerConfig AppConfig::grpcServerConfig;
 
@@ -84,13 +83,6 @@ bool AppConfig::loadFromFile(const std::string& configFilePath) {
             if (general.contains("threadPoolSize") && general["threadPoolSize"].is_number_integer())
                 threadPoolSize = general["threadPoolSize"];
 
-            // 加载HTTP服务器配置
-            if (general.contains("http_server") && general["http_server"].is_object()) {
-                httpServerConfig = HTTPServerConfig::fromJson(general["http_server"]);
-                Logger::info("Loading HTTP server configuration: " + httpServerConfig.host + ":" +
-                             std::to_string(httpServerConfig.port));
-            }
-
             if (general.contains("grpc_server") && general["grpc_server"].is_object()) {
                 grpcServerConfig = GRPCServerConfig::fromJson(general["grpc_server"]);
                 Logger::info("Loading gRPC server configuration: " + grpcServerConfig.host + ":" +
@@ -140,9 +132,6 @@ bool AppConfig::saveToFile(const std::string& configFilePath) {
         general["logLevel"] = logLevel;
         general["threadPoolSize"] = threadPoolSize;
         general["dirPath"] = dirPath;
-
-        // 添加HTTP服务器配置
-        general["http_server"] = httpServerConfig.toJson();
 
         // 添加额外选项
         json extraOptionsJson;
@@ -199,34 +188,6 @@ bool AppConfig::saveToFile(const std::string& configFilePath) {
 
 const ConcurrencyServerConfig& AppConfig::getConcurrencyConfig() {
     return concurrencyConfig;
-}
-
-// HTTP服务器配置实现
-HTTPServerConfig HTTPServerConfig::fromJson(const nlohmann::json& j) {
-    HTTPServerConfig config;
-
-    if (j.contains("host") && j["host"].is_string())
-        config.host = j["host"];
-
-    if (j.contains("port") && j["port"].is_number_integer())
-        config.port = j["port"];
-
-    if (j.contains("connection_timeout") && j["connection_timeout"].is_number_integer())
-        config.connectionTimeout = j["connection_timeout"];
-
-    if (j.contains("read_timeout") && j["read_timeout"].is_number_integer())
-        config.readTimeout = j["read_timeout"];
-
-    return config;
-}
-
-nlohmann::json HTTPServerConfig::toJson() const {
-    nlohmann::json j;
-    j["host"] = host;
-    j["port"] = port;
-    j["connection_timeout"] = connectionTimeout;
-    j["read_timeout"] = readTimeout;
-    return j;
 }
 
 // 模型配置相关方法
@@ -308,10 +269,6 @@ const std::map<std::string, std::string>& AppConfig::getExtraOptions() {
 
 std::string AppConfig::getDirPath() {
     return dirPath;
-}
-
-const HTTPServerConfig& AppConfig::getHTTPServerConfig() {
-    return httpServerConfig;
 }
 
 GRPCServerConfig GRPCServerConfig::fromJson(const nlohmann::json& j) {

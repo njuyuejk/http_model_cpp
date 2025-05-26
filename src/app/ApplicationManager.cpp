@@ -5,9 +5,6 @@
 #include "app/ApplicationManager.h"
 #include "exception/GlobalExceptionHandler.h"
 #include "grpc/GrpcServer.h"
-#include "routeManager/HttpServer.h"
-#include "routeManager/RouteManager.h"
-#include "routeManager/base/RouteInitializer.h"
 #include "grpc/base/GrpcServiceInitializerBase.h"
 #include "grpc/base/GrpcServiceRegistry.h"
 #include "grpc/base/GrpcServiceFactory.h"
@@ -90,7 +87,6 @@ bool ApplicationManager::initialize(const std::string& configPath) {
 
     // 初始化并发监控器
     if (concurrencyConfig_.enableConcurrencyMonitoring) {
-        httpMonitor_ = std::make_unique<ConcurrencyMonitor>();
         grpcMonitor_ = std::make_unique<ConcurrencyMonitor>();
         Logger::info("Concurrency monitoring enabled");
     } else {
@@ -120,20 +116,6 @@ bool ApplicationManager::initialize(const std::string& configPath) {
         Logger::warning("gRPC server initialization failed, program will continue without gRPC functionality");
     }
 
-    // 初始化路由
-    bool routes_initialized = initializeRoutes();
-    if (!routes_initialized) {
-        Logger::error("Route initialization failed");
-        return false;
-    }
-
-    // 启动HTTP服务器
-    bool http_started = startHttpServer();
-    if (!http_started) {
-        Logger::error("HTTP server start failed");
-        return false;
-    }
-
     initialized = true;
     Logger::info("Application manager initialized successfully");
 
@@ -149,12 +131,6 @@ void ApplicationManager::shutdown() {
     }
 
     Logger::info("Shutting down application manager...");
-
-    // 停止HTTP服务器
-    if (httpServer && httpServer->isRunning()) {
-        Logger::info("Stopping HTTP server...");
-        httpServer->stop();
-    }
 
     // 停止gRPC服务器
     if (grpcServer) {
@@ -183,14 +159,6 @@ void ApplicationManager::shutdown() {
     std::vector<std::unique_ptr<GrpcServiceInitializerBase>>().swap(grpcServiceInitializers);
 
     // 清理并发监控器
-    if (httpMonitor_) {
-        auto httpStats = httpMonitor_->getStats();
-        Logger::info("HTTP final stats - total: " + std::to_string(httpStats.total) +
-                     ", failed: " + std::to_string(httpStats.failed) +
-                     ", failure_rate: " + std::to_string(httpStats.failureRate * 100) + "%");
-        httpMonitor_.reset();
-    }
-
     if (grpcMonitor_) {
         auto grpcStats = grpcMonitor_->getStats();
         Logger::info("gRPC final stats - total: " + std::to_string(grpcStats.total) +
@@ -204,10 +172,6 @@ void ApplicationManager::shutdown() {
     Logger::shutdown();
 
     initialized = false;
-}
-
-const HTTPServerConfig& ApplicationManager::getHTTPServerConfig() const {
-    return AppConfig::getHTTPServerConfig();
 }
 
 bool ApplicationManager::initializeModelPools() {
@@ -311,10 +275,6 @@ bool ApplicationManager::initializeModelPools() {
 std::string ApplicationManager::getGrpcServerAddress() const {
     const auto& grpcConfig = AppConfig::getGRPCServerConfig();
     return grpcConfig.host + ":" + std::to_string(grpcConfig.port);
-}
-
-HttpServer* ApplicationManager::getHttpServer() const {
-    return httpServer.get();
 }
 
 GrpcServer* ApplicationManager::getGrpcServer() const {
@@ -461,24 +421,6 @@ std::unordered_map<int, ModelPool::PoolStatus> ApplicationManager::getAllModelPo
 }
 
 // 并发监控方法实现
-void ApplicationManager::startHttpRequest() {
-    if (httpMonitor_ && concurrencyConfig_.enableConcurrencyMonitoring) {
-        httpMonitor_->requestStarted();
-    }
-}
-
-void ApplicationManager::completeHttpRequest() {
-    if (httpMonitor_ && concurrencyConfig_.enableConcurrencyMonitoring) {
-        httpMonitor_->requestCompleted();
-    }
-}
-
-void ApplicationManager::failHttpRequest() {
-    if (httpMonitor_ && concurrencyConfig_.enableConcurrencyMonitoring) {
-        httpMonitor_->requestFailed();
-        httpMonitor_->requestCompleted();
-    }
-}
 
 void ApplicationManager::startGrpcRequest() {
     if (grpcMonitor_ && concurrencyConfig_.enableConcurrencyMonitoring) {
@@ -497,13 +439,6 @@ void ApplicationManager::failGrpcRequest() {
         grpcMonitor_->requestFailed();
         grpcMonitor_->requestCompleted();
     }
-}
-
-ConcurrencyMonitor::Stats ApplicationManager::getHttpConcurrencyStats() const {
-    if (httpMonitor_) {
-        return httpMonitor_->getStats();
-    }
-    return ConcurrencyMonitor::Stats{0, 0, 0, 0.0};
 }
 
 ConcurrencyMonitor::Stats ApplicationManager::getGrpcConcurrencyStats() const {
@@ -609,58 +544,8 @@ bool ApplicationManager::initializeGrpcServer() {
     });
 }
 
-bool ApplicationManager::initializeRoutes() {
-    return ExceptionHandler::execute("Initializing routes", [&]() {
-        Logger::info("Initializing HTTP routes");
-
-        // 初始化所有路由组
-        RouteInitializer::initializeRoutes();
-
-        Logger::info("HTTP routes initialized successfully");
-        return true;
-    });
-}
-
-bool ApplicationManager::startHttpServer() {
-    return ExceptionHandler::execute("Starting HTTP server", [&]() {
-        const auto& httpConfig = getHTTPServerConfig();
-        Logger::info("Creating HTTP server with config: " + httpConfig.host + ":" +
-                     std::to_string(httpConfig.port));
-
-        // 创建HTTP服务器
-        httpServer = std::make_unique<HttpServer>(httpConfig);
-
-        // 配置所有路由
-        Logger::info("Configuring HTTP routes");
-        RouteManager::getInstance().configureRoutes(*httpServer);
-
-        // 启动服务器
-        Logger::info("Starting HTTP server...");
-        if (!httpServer->start()) {
-            Logger::error("Failed to start HTTP server");
-            return false;
-        }
-
-        Logger::info("HTTP server successfully started at " + httpConfig.host + ":" +
-                     std::to_string(httpConfig.port));
-        return true;
-    });
-}
-
 void ApplicationManager::logInitializationSummary() {
     Logger::info("=== Application Manager Initialization Summary ===");
-
-    // HTTP服务器状态
-    if (httpServer && httpServer->isRunning()) {
-        const auto& httpConfig = getHTTPServerConfig();
-        Logger::info("✓ HTTP Server: Running at " + httpConfig.host + ":" + std::to_string(httpConfig.port));
-
-        // 统计路由数量
-        const auto& routes = httpServer->getRoutes();
-        Logger::info("  - Routes registered: " + std::to_string(routes.size()));
-    } else {
-        Logger::info("✗ HTTP Server: Not running");
-    }
 
     // gRPC服务器状态
     if (grpcServer && grpcServer->isRunning()) {

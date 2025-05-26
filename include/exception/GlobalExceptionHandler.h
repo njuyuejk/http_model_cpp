@@ -5,7 +5,6 @@
 #ifndef EXCEPTION_HANDLER_H
 #define EXCEPTION_HANDLER_H
 
-#include "httplib.h"
 #include "common/Logger.h"
 #include "nlohmann/json.hpp"
 #include <stdexcept>
@@ -42,26 +41,6 @@ public:
 };
 
 /**
- * @brief API异常
- * 当API请求处理出错时抛出
- */
-class APIException : public AppException {
-public:
-    APIException(const std::string& message, int code = 400)
-            : AppException(message, code, "API Error") {}
-};
-
-/**
- * @brief JSON解析异常
- * 当JSON解析出错时抛出
- */
-class JSONParseException : public AppException {
-public:
-    JSONParseException(const std::string& message)
-            : AppException(message, 400, "JSON Parse Error") {}
-};
-
-/**
  * @brief 模型异常
  * 当模型初始化或使用过程中出错时抛出
  */
@@ -85,25 +64,6 @@ private:
  */
 class ExceptionHandler {
 public:
-    /**
-     * @brief 处理HTTP请求过程中的异常
-     * @param req HTTP请求
-     * @param res HTTP响应
-     * @param func 要执行的处理函数
-     */
-    static void handleRequest(
-            const httplib::Request& req,
-            httplib::Response& res,
-            std::function<void(const httplib::Request&, httplib::Response&)> func);
-
-    /**
-     * @brief 将异常转换为标准化的错误响应
-     * @param res HTTP响应
-     * @param e 异常
-     * @param req HTTP请求（可选）
-     */
-    static void setErrorResponse(httplib::Response& res, const std::exception& e, const httplib::Request* req = nullptr);
-
     /**
      * @brief 处理执行操作过程中的异常
      * @param operation 操作描述
