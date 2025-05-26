@@ -25,7 +25,15 @@ int main() {
     std::signal(SIGINT, signalHandler);
     std::signal(SIGTERM, signalHandler);
 
-    Logger::info("Starting 58AI Program... \n"
+    try {
+        // 初始化应用程序管理器
+        auto& appManager = ApplicationManager::getInstance();
+        if (!appManager.initialize("./modelConfig.json")) {
+            std::cerr << "Failed to initialize application" << std::endl;
+            return -1;
+        }
+
+        Logger::info("Starting 58AI Program... \n"
                  "===============================================\n"
                  "         ███████╗ █████╗  █████╗ ██╗\n"
                  "         ██╔════╝██╔══██╗██╔══██╗██║\n"
@@ -34,14 +42,6 @@ int main() {
                  "         ███████║╚█████╔╝██║  ██║██║\n"
                  "         ╚══════╝ ╚════╝ ╚═╝  ╚═╝╚═╝\n"
                  "===============================================\n");
-
-    try {
-        // 初始化应用程序管理器
-        auto& appManager = ApplicationManager::getInstance();
-        if (!appManager.initialize("./modelConfig.json")) {
-            std::cerr << "Failed to initialize application" << std::endl;
-            return -1;
-        }
 
         // 程序初始化完成，现在等待退出信号
         Logger::info("==========================================");

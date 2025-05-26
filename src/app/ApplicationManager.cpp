@@ -48,32 +48,42 @@ bool ApplicationManager::initialize(const std::string& configPath) {
 
     configFilePath = configPath;
 
-    // 初始化日志系统，使用默认值
-    Logger::init();
-
-    Logger::info("Initializing application manager...");
-
-    // 使用异常处理加载配置
-    bool config_loaded = ExceptionHandler::execute("Loading configuration file", [&]() {
-        if (!AppConfig::loadFromFile(configFilePath)) {
-            throw ConfigException("Failed to load configuration from path: " + configFilePath);
-        }
-    });
-
-    if (!config_loaded) {
-        Logger::error("Configuration loading failed, using default configuration");
-    } else {
-        Logger::info("Configuration loaded successfully");
+    // 日志初始化
+    bool config_loaded = false;
+    try {
+        config_loaded = AppConfig::loadFromFile(configFilePath);
+    } catch (const std::exception& e) {
+        // 配置加载失败，但不记录日志（因为Logger还未初始化）
+        std::cerr << "Configuration loading failed: " << e.what() << std::endl;
     }
 
-    // 使用加载的设置或默认值重新初始化日志系统
-    ExceptionHandler::execute("Initializing logging system", [&]() {
+    // 根据配置文件的设置初始化日志系统**
+    if (config_loaded) {
+        // 使用配置文件中的设置初始化日志系统
         Logger::init(
                 AppConfig::getLogToFile(),
                 AppConfig::getLogFilePath(),
                 static_cast<LogLevel>(AppConfig::getLogLevel())
         );
-    });
+    } else {
+        // 配置加载失败，使用默认设置初始化日志系统
+        Logger::init(false, "./logs", LogLevel::INFO);
+    }
+
+    // **现在Logger已经完全初始化，可以安全地记录日志**
+    Logger::info("Initializing application manager...");
+
+    if (config_loaded) {
+        Logger::info("Configuration loaded successfully from: " + configFilePath);
+    } else {
+        Logger::warning("Configuration loading failed, using default configuration");
+        // 尝试重新加载配置（这次记录详细错误）
+        ExceptionHandler::execute("Loading configuration file", [&]() {
+            if (!AppConfig::loadFromFile(configFilePath)) {
+                throw ConfigException("Failed to load configuration from path: " + configFilePath);
+            }
+        });
+    }
 
     // 加载并发配置
     const auto& config = AppConfig::getConcurrencyConfig();
