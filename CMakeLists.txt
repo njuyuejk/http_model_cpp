@@ -122,29 +122,6 @@ set(ai_service
         include/AIService/ModelPool.h
 )
 
-set(grpc
-        include/grpc/message/grpc_service.pb.h
-        src/grpc/message/grpc_service.pb.cc
-        src/grpc/GrpcServer.cpp
-        include/grpc/GrpcServer.h
-        src/grpc/GrpcClient.cpp
-        include/grpc/GrpcClient.h
-        src/grpc/impl/aiModel/AIModelServiceImpl.cpp
-        include/grpc/impl/aiModel/AIModelServiceImpl.h
-        include/grpc/message/grpc_service.grpc.pb.h
-        src/grpc/message/grpc_service.grpc.pb.cc
-        include/grpc/base/GrpcServiceInitializerBase.h
-        src/grpc/impl/aiModel/AIModelServiceInitializer.cpp
-        include/grpc/impl/aiModel/AIModelServiceInitializer.h
-        src/grpc/base/GrpcServiceRegistry.cpp
-        include/grpc/base/GrpcServiceRegistry.h
-        src/grpc/base/GrpcServiceFactory.cpp
-        include/grpc/base/GrpcServiceFactory.h
-        src/grpc/impl/status/StatusServiceImpl.cpp
-        include/grpc/impl/status/StatusServiceImpl.h
-        src/grpc/impl/status/StatusServiceInitializer.cpp
-        include/grpc/impl/status/StatusServiceInitializer.h
-)
 
 # 所有库源文件
 set(LIB_SOURCES
@@ -154,7 +131,6 @@ set(LIB_SOURCES
         ${route}
         ${exception}
         ${ai_service}
-        ${grpc}
 )
 
 # 创建静态库 (可根据需要改为 SHARED 库)

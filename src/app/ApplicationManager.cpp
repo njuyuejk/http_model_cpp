@@ -4,13 +4,9 @@
 
 #include "app/ApplicationManager.h"
 #include "exception/GlobalExceptionHandler.h"
-#include "grpc/GrpcServer.h"
 #include "routeManager/HttpServer.h"
 #include "routeManager/RouteManager.h"
 #include "routeManager/base/RouteInitializer.h"
-#include "grpc/base/GrpcServiceInitializerBase.h"
-#include "grpc/base/GrpcServiceRegistry.h"
-#include "grpc/base/GrpcServiceFactory.h"
 #include "AIService/ModelPool.h"
 
 // 初始化静态成员
@@ -101,7 +97,6 @@ bool ApplicationManager::initialize(const std::string& configPath) {
     // 初始化并发监控器
     if (concurrencyConfig_.enableConcurrencyMonitoring) {
         httpMonitor_ = std::make_unique<ConcurrencyMonitor>();
-        grpcMonitor_ = std::make_unique<ConcurrencyMonitor>();
         Logger::info("Concurrency monitoring enabled");
     } else {
         Logger::info("Concurrency monitoring disabled");
@@ -116,18 +111,6 @@ bool ApplicationManager::initialize(const std::string& configPath) {
 
     if (!pools_initialized) {
         Logger::warning("Model pool initialization failed, program will continue running...");
-    }
-
-    // 从注册表注册所有gRPC服务
-    bool services_registered = registerGrpcServicesFromRegistry();
-    if (!services_registered) {
-        Logger::warning("gRPC service registration failed, program will continue but gRPC functionality might be unavailable");
-    }
-
-    // 初始化gRPC服务器
-    bool grpc_initialized = initializeGrpcServer();
-    if (!grpc_initialized) {
-        Logger::warning("gRPC server initialization failed, program will continue without gRPC functionality");
     }
 
     // 初始化路由
@@ -166,12 +149,6 @@ void ApplicationManager::shutdown() {
         httpServer->stop();
     }
 
-    // 停止gRPC服务器
-    if (grpcServer) {
-        Logger::info("Stopping gRPC server...");
-        grpcServer->stop();
-    }
-
     // 关闭所有模型池
     {
         std::unique_lock<std::shared_mutex> lock(modelPoolsMutex_);
@@ -188,10 +165,6 @@ void ApplicationManager::shutdown() {
         Logger::info("All model pools shutdown completed");
     }
 
-    // 清理gRPC服务初始化器
-    grpcServiceInitializers.clear();
-    std::vector<std::unique_ptr<GrpcServiceInitializerBase>>().swap(grpcServiceInitializers);
-
     // 清理并发监控器
     if (httpMonitor_) {
         auto httpStats = httpMonitor_->getStats();
@@ -199,14 +172,6 @@ void ApplicationManager::shutdown() {
                      ", failed: " + std::to_string(httpStats.failed) +
                      ", failure_rate: " + std::to_string(httpStats.failureRate * 100) + "%");
         httpMonitor_.reset();
-    }
-
-    if (grpcMonitor_) {
-        auto grpcStats = grpcMonitor_->getStats();
-        Logger::info("gRPC final stats - total: " + std::to_string(grpcStats.total) +
-                     ", failed: " + std::to_string(grpcStats.failed) +
-                     ", failure_rate: " + std::to_string(grpcStats.failureRate * 100) + "%");
-        grpcMonitor_.reset();
     }
 
     // 关闭日志系统
@@ -318,17 +283,8 @@ bool ApplicationManager::initializeModelPools() {
     return all_success;
 }
 
-std::string ApplicationManager::getGrpcServerAddress() const {
-    const auto& grpcConfig = AppConfig::getGRPCServerConfig();
-    return grpcConfig.host + ":" + std::to_string(grpcConfig.port);
-}
-
 HttpServer* ApplicationManager::getHttpServer() const {
     return httpServer.get();
-}
-
-GrpcServer* ApplicationManager::getGrpcServer() const {
-    return grpcServer.get();
 }
 
 // 模型池访问方法实现
@@ -490,35 +446,9 @@ void ApplicationManager::failHttpRequest() {
     }
 }
 
-void ApplicationManager::startGrpcRequest() {
-    if (grpcMonitor_ && concurrencyConfig_.enableConcurrencyMonitoring) {
-        grpcMonitor_->requestStarted();
-    }
-}
-
-void ApplicationManager::completeGrpcRequest() {
-    if (grpcMonitor_ && concurrencyConfig_.enableConcurrencyMonitoring) {
-        grpcMonitor_->requestCompleted();
-    }
-}
-
-void ApplicationManager::failGrpcRequest() {
-    if (grpcMonitor_ && concurrencyConfig_.enableConcurrencyMonitoring) {
-        grpcMonitor_->requestFailed();
-        grpcMonitor_->requestCompleted();
-    }
-}
-
 ConcurrencyMonitor::Stats ApplicationManager::getHttpConcurrencyStats() const {
     if (httpMonitor_) {
         return httpMonitor_->getStats();
-    }
-    return ConcurrencyMonitor::Stats{0, 0, 0, 0.0};
-}
-
-ConcurrencyMonitor::Stats ApplicationManager::getGrpcConcurrencyStats() const {
-    if (grpcMonitor_) {
-        return grpcMonitor_->getStats();
     }
     return ConcurrencyMonitor::Stats{0, 0, 0, 0.0};
 }
@@ -527,97 +457,6 @@ const ConcurrencyConfig& ApplicationManager::getConcurrencyConfig() const {
     return concurrencyConfig_;
 }
 
-// gRPC服务方法实现
-void ApplicationManager::registerGrpcServiceInitializer(std::unique_ptr<GrpcServiceInitializerBase> initializer) {
-    if (initializer) {
-        Logger::info("Registering gRPC service initializer: " + initializer->getServiceName());
-        grpcServiceInitializers.push_back(std::move(initializer));
-    }
-}
-
-bool ApplicationManager::initializeGrpcServices() {
-    if (!grpcServer) {
-        Logger::error("Cannot initialize gRPC services: server not created");
-        return false;
-    }
-
-    if (grpcServiceInitializers.empty()) {
-        Logger::warning("No gRPC service initializers to process");
-        return true;
-    }
-
-    bool allSucceeded = true;
-
-    Logger::info("Initializing " + std::to_string(grpcServiceInitializers.size()) + " gRPC services");
-
-    for (const auto& initializer : grpcServiceInitializers) {
-        if (initializer) {
-            Logger::info("Initializing gRPC service: " + initializer->getServiceName());
-
-            if (!initializer->initialize(grpcServer.get())) {
-                Logger::error("Failed to initialize gRPC service: " + initializer->getServiceName());
-                allSucceeded = false;
-                // 继续初始化其他服务，即使一个失败
-            } else {
-                Logger::info("Successfully initialized gRPC service: " + initializer->getServiceName());
-            }
-        }
-    }
-
-    if (allSucceeded) {
-        Logger::info("All gRPC services initialized successfully");
-    } else {
-        Logger::warning("Some gRPC services failed to initialize");
-    }
-
-    return allSucceeded;
-}
-
-bool ApplicationManager::registerGrpcServicesFromRegistry() {
-    return ExceptionHandler::execute("Registering gRPC services from registry", [&]() {
-        Logger::info("Registering gRPC services from registry");
-        auto& registry = GrpcServiceRegistry::getInstance();
-
-        // 使用工厂初始化所有服务
-        GrpcServiceFactory::initializeAllServices(registry, *this);
-
-        // 注册所有服务
-        bool result = registry.registerAllServices(*this);
-
-        if (result) {
-            Logger::info("Successfully registered all gRPC services from registry");
-        } else {
-            Logger::warning("Failed to register some gRPC services from registry");
-        }
-
-        return result;
-    });
-}
-
-bool ApplicationManager::initializeGrpcServer() {
-    return ExceptionHandler::execute("Initializing gRPC server", [&]() {
-        std::string grpcAddress = getGrpcServerAddress();
-        Logger::info("Initializing gRPC server, address: " + grpcAddress);
-
-        // 创建gRPC服务器
-        grpcServer = std::make_unique<GrpcServer>(grpcAddress);
-
-        // 初始化注册的服务
-        if (!initializeGrpcServices()) {
-            Logger::warning("Some gRPC services failed to initialize");
-        }
-
-        // 启动服务器
-        if (!grpcServer->start()) {
-            Logger::warning("Failed to start gRPC server at " + grpcAddress +
-                            ", will continue running without gRPC functionality");
-            return false;
-        }
-
-        Logger::info("gRPC server successfully started at " + grpcAddress);
-        return true;
-    });
-}
 
 bool ApplicationManager::initializeRoutes() {
     return ExceptionHandler::execute("Initializing routes", [&]() {
@@ -670,14 +509,6 @@ void ApplicationManager::logInitializationSummary() {
         Logger::info("  - Routes registered: " + std::to_string(routes.size()));
     } else {
         Logger::info("✗ HTTP Server: Not running");
-    }
-
-    // gRPC服务器状态
-    if (grpcServer && grpcServer->isRunning()) {
-        Logger::info("✓ gRPC Server: Running at " + getGrpcServerAddress());
-        Logger::info("  - Services registered: " + std::to_string(grpcServiceInitializers.size()));
-    } else {
-        Logger::info("✗ gRPC Server: Not running");
     }
 
     // 模型池状态

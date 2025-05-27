@@ -53,17 +53,6 @@ struct HTTPServerConfig {
     nlohmann::json toJson() const;
 };
 
-// 添加到HTTPServerConfig结构体：
-struct GRPCServerConfig {
-    std::string host;
-    int port;
-
-    GRPCServerConfig() : host("127.0.0.1"), port(50051) {}
-
-    static GRPCServerConfig fromJson(const nlohmann::json& j);
-    nlohmann::json toJson() const;
-};
-
 /*
  * @brief 并发配置
  * */
@@ -163,8 +152,6 @@ public:
      */
     static bool removeModelConfig(const std::string& name);
 
-    static const GRPCServerConfig& getGRPCServerConfig();
-
     /**
      * @brief 获取并发配置
      */
@@ -179,7 +166,6 @@ private:
     static std::string dirPath;
     static HTTPServerConfig httpServerConfig;
     static std::vector<ModelConfig> modelConfigs;
-    static GRPCServerConfig grpcServerConfig;
     static ConcurrencyServerConfig concurrencyConfig;
 };
 

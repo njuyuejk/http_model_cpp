@@ -19,8 +19,6 @@ std::map<std::string, std::string> AppConfig::extraOptions;
 std::string AppConfig::dirPath = "/root/data";
 HTTPServerConfig AppConfig::httpServerConfig;
 
-GRPCServerConfig AppConfig::grpcServerConfig;
-
 ConcurrencyServerConfig AppConfig::concurrencyConfig;
 
 // ModelConfig 实现
@@ -89,12 +87,6 @@ bool AppConfig::loadFromFile(const std::string& configFilePath) {
                 httpServerConfig = HTTPServerConfig::fromJson(general["http_server"]);
                 Logger::info("Loading HTTP server configuration: " + httpServerConfig.host + ":" +
                              std::to_string(httpServerConfig.port));
-            }
-
-            if (general.contains("grpc_server") && general["grpc_server"].is_object()) {
-                grpcServerConfig = GRPCServerConfig::fromJson(general["grpc_server"]);
-                Logger::info("Loading gRPC server configuration: " + grpcServerConfig.host + ":" +
-                             std::to_string(grpcServerConfig.port));
             }
 
             // 加载并发配置
@@ -312,30 +304,6 @@ std::string AppConfig::getDirPath() {
 
 const HTTPServerConfig& AppConfig::getHTTPServerConfig() {
     return httpServerConfig;
-}
-
-GRPCServerConfig GRPCServerConfig::fromJson(const nlohmann::json& j) {
-    GRPCServerConfig config;
-
-    if (j.contains("host") && j["host"].is_string())
-        config.host = j["host"];
-
-    if (j.contains("port") && j["port"].is_number_integer())
-        config.port = j["port"];
-
-    return config;
-}
-
-nlohmann::json GRPCServerConfig::toJson() const {
-    nlohmann::json j;
-    j["host"] = host;
-    j["port"] = port;
-    return j;
-}
-
-// 添加getter实现
-const GRPCServerConfig& AppConfig::getGRPCServerConfig() {
-    return grpcServerConfig;
 }
 
 ConcurrencyServerConfig ConcurrencyServerConfig::fromJson(const nlohmann::json& j) {

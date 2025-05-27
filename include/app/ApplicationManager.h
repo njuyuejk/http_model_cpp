@@ -17,9 +17,7 @@
 #include <condition_variable>
 
 // Forward declarations
-class GrpcServer;
 class HttpServer;
-class GrpcServiceInitializerBase;
 
 /**
  * @brief 并发配置结构体
@@ -51,14 +49,8 @@ private:
     // 配置文件路径
     std::string configFilePath;
 
-    // gRPC服务器
-    std::unique_ptr<GrpcServer> grpcServer;
-
     // HTTP服务器
     std::unique_ptr<HttpServer> httpServer;
-
-    // gRPC服务初始化器集合
-    std::vector<std::unique_ptr<GrpcServiceInitializerBase>> grpcServiceInitializers;
 
     // 模型池管理
     std::unordered_map<int, std::unique_ptr<ModelPool>> modelPools_;
@@ -66,11 +58,9 @@ private:
 
     // 并发监控
     std::unique_ptr<ConcurrencyMonitor> httpMonitor_;
-    std::unique_ptr<ConcurrencyMonitor> grpcMonitor_;
     ConcurrencyConfig concurrencyConfig_;
 
     // 初始化方法
-    bool initializeGrpcServer();
     bool initializeRoutes();
     bool startHttpServer();
 
@@ -114,14 +104,8 @@ public:
      */
     bool initializeModelPools();
 
-    // 获取格式化为host:port的gRPC服务器地址
-    std::string getGrpcServerAddress() const;
-
     // 获取HTTP服务器实例
     HttpServer* getHttpServer() const;
-
-    // 获取gRPC服务器实例
-    GrpcServer* getGrpcServer() const;
 
     // 模型池访问方法
 
@@ -176,11 +160,6 @@ public:
     ConcurrencyMonitor::Stats getHttpConcurrencyStats() const;
 
     /**
-     * @brief 获取gRPC并发统计
-     */
-    ConcurrencyMonitor::Stats getGrpcConcurrencyStats() const;
-
-    /**
      * @brief 开始HTTP请求监控
      */
     void startHttpRequest();
@@ -196,29 +175,9 @@ public:
     void failHttpRequest();
 
     /**
-     * @brief 开始gRPC请求监控
-     */
-    void startGrpcRequest();
-
-    /**
-     * @brief 完成gRPC请求监控
-     */
-    void completeGrpcRequest();
-
-    /**
-     * @brief gRPC请求失败监控
-     */
-    void failGrpcRequest();
-
-    /**
      * @brief 获取并发配置
      */
     const ConcurrencyConfig& getConcurrencyConfig() const;
-
-    // gRPC服务注册方法
-    void registerGrpcServiceInitializer(std::unique_ptr<GrpcServiceInitializerBase> initializer);
-    bool initializeGrpcServices();
-    bool registerGrpcServicesFromRegistry();
 };
 
 #endif // APPLICATION_MANAGER_H

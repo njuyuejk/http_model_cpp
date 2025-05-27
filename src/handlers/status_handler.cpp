@@ -6,7 +6,6 @@
 #include "nlohmann/json.hpp"
 #include "exception/GlobalExceptionHandler.h"
 #include "app/ApplicationManager.h"
-#include "grpc/GrpcServer.h"
 
 using json = nlohmann::json;
 
@@ -19,7 +18,6 @@ void Handlers::handle_system_status(const httplib::Request& req, httplib::Respon
 
         // 获取并发统计
         auto httpStats = appManager.getHttpConcurrencyStats();
-        auto grpcStats = appManager.getGrpcConcurrencyStats();
 
         // 获取配置信息
         auto concurrencyConfig = appManager.getConcurrencyConfig();
@@ -28,7 +26,6 @@ void Handlers::handle_system_status(const httplib::Request& req, httplib::Respon
                 {"status", "success"},
                 {"system_info", {
                                    {"http_server_running", appManager.getHttpServer() != nullptr},
-                                   {"grpc_server_running", appManager.getGrpcServer() != nullptr && appManager.getGrpcServer()->isRunning()},
                                    {"total_model_pools", allPoolStatus.size()}
                            }},
                 {"concurrency_config", {
@@ -43,12 +40,6 @@ void Handlers::handle_system_status(const httplib::Request& req, httplib::Respon
                                    {"total_requests", httpStats.total},
                                    {"failed_requests", httpStats.failed},
                                    {"failure_rate", httpStats.failureRate}
-                           }},
-                {"grpc_stats", {
-                                   {"active_requests", grpcStats.active},
-                                   {"total_requests", grpcStats.total},
-                                   {"failed_requests", grpcStats.failed},
-                                   {"failure_rate", grpcStats.failureRate}
                            }}
         };
 
@@ -113,7 +104,6 @@ void Handlers::handle_concurrency_stats(const httplib::Request& req, httplib::Re
         auto& appManager = ApplicationManager::getInstance();
 
         auto httpStats = appManager.getHttpConcurrencyStats();
-        auto grpcStats = appManager.getGrpcConcurrencyStats();
 
         json response_json = {
                 {"status", "success"},
@@ -126,20 +116,12 @@ void Handlers::handle_concurrency_stats(const httplib::Request& req, httplib::Re
                                    {"failure_rate", httpStats.failureRate},
                                    {"success_rate", 1.0 - httpStats.failureRate}
                            }},
-                {"grpc_concurrency", {
-                                   {"active_requests", grpcStats.active},
-                                   {"total_requests", grpcStats.total},
-                                   {"failed_requests", grpcStats.failed},
-                                   {"success_requests", grpcStats.total - grpcStats.failed},
-                                   {"failure_rate", grpcStats.failureRate},
-                                   {"success_rate", 1.0 - grpcStats.failureRate}
-                           }},
                 {"combined_stats", {
-                                   {"total_active", httpStats.active + grpcStats.active},
-                                   {"total_processed", httpStats.total + grpcStats.total},
-                                   {"total_failed", httpStats.failed + grpcStats.failed},
-                                   {"overall_failure_rate", (httpStats.total + grpcStats.total) > 0 ?
-                                                            (double)(httpStats.failed + grpcStats.failed) / (httpStats.total + grpcStats.total) : 0.0}
+                                   {"total_active", httpStats.active},
+                                   {"total_processed", httpStats.total},
+                                   {"total_failed", httpStats.failed},
+                                   {"overall_failure_rate", (httpStats.total) > 0 ?
+                                                            (double)(httpStats.failed) / (httpStats.total) : 0.0}
                            }}
         };
 
