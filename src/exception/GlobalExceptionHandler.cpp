@@ -53,12 +53,12 @@ void ExceptionHandler::setErrorResponse(
         std::stringstream log_msg;
         log_msg << error_type << " (" << status_code << "): "
                 << e.what() << " path: " << req->path;
-        Logger::get_instance().error(log_msg.str());
+        LOGGER_ERROR(log_msg.str());
     } else {
         // 记录错误日志（无请求信息）
         std::stringstream log_msg;
         log_msg << error_type << " (" << status_code << "): " << e.what();
-        Logger::get_instance().error(log_msg.str());
+        LOGGER_ERROR(log_msg.str());
     }
 
     res.status = status_code;
@@ -72,12 +72,12 @@ bool ExceptionHandler::execute(const std::string& operation, std::function<void(
     } catch (const std::exception& e) {
         std::stringstream log_msg;
         log_msg << "Operation execution failed: " << operation << " - " << e.what();
-        Logger::get_instance().error(log_msg.str());
+        LOGGER_ERROR(log_msg.str());
         return false;
     } catch (...) {
         std::stringstream log_msg;
         log_msg << "Operation execution failed (unknown error): " << operation;
-        Logger::get_instance().error(log_msg.str());
+        LOGGER_ERROR(log_msg.str());
         return false;
     }
 }

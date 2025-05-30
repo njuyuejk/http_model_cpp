@@ -80,7 +80,7 @@
 //
 ////        cv::imwrite("./test.jpg", ori_img);
 //
-//        Logger::info("output ori_img width: "+ std::to_string(ori_img.cols));
+//        LOGGER_INFO("output ori_img width: "+ std::to_string(ori_img.cols));
 //
 //        // 手动将嵌套向量转换为 JSON
 //        json json_data = json::array();
@@ -161,6 +161,8 @@ void Handlers::handle_api_model_process(const httplib::Request& req, httplib::Re
 
             std::string message = received_json["img"];
             int modelType = received_json["modelType"];
+            double startValue = received_json["startValue"];
+            double endValue = received_json["endValue"];
 
             // 获取超时配置
             int timeout = appManager.getConcurrencyConfig().modelAcquireTimeoutMs;
@@ -196,17 +198,21 @@ void Handlers::handle_api_model_process(const httplib::Request& req, httplib::Re
             }
 
             // 记录图像处理开始
-            Logger::info("Processing image request - model_type: " + std::to_string(modelType) +
+            LOGGER_INFO("Processing image request - model_type: " + std::to_string(modelType) +
                          ", image_size: " + std::to_string(ori_img.cols) + "x" + std::to_string(ori_img.rows));
 
             // 使用模型池进行推理
             std::vector<std::vector<std::any>> results_vector;
             std::vector<std::string> plateResults_vector;
+            double targetValue;
 
             bool success = appManager.executeModelInference(modelType,
                                                             ori_img,
                                                             results_vector,
                                                             plateResults_vector,
+                                                            startValue,
+                                                            endValue,
+                                                            targetValue,
                                                             timeout);
 
             ori_img.release();
@@ -267,6 +273,9 @@ void Handlers::handle_api_model_process(const httplib::Request& req, httplib::Re
             // 添加车牌结果 - 使用移动语义
             response_json["plate_results"] = std::move(plateResults_vector);
 
+            // 添加表盘识别结果
+            response_json["meter_result"] = targetValue;
+
             // 添加并发状态信息（如果启用监控）
             if (appManager.getConcurrencyConfig().enableConcurrencyMonitoring) {
                 auto httpStats = appManager.getHttpConcurrencyStats();
@@ -289,7 +298,7 @@ void Handlers::handle_api_model_process(const httplib::Request& req, httplib::Re
             res.set_content(response_json.dump(), "application/json");
 
             // 记录成功处理
-            Logger::info("Image processing completed successfully - model_type: " +
+            LOGGER_INFO("Image processing completed successfully - model_type: " +
                          std::to_string(modelType) + ", time: " + std::to_string(duration.count()) + "ms");
 
             // 完成请求监控
