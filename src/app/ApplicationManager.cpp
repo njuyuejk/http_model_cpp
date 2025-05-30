@@ -20,14 +20,14 @@ std::mutex ApplicationManager::instanceMutex;
 ApplicationManager::ApplicationManager()
         : initialized(false), configFilePath("") {
     // 私有构造函数
-    Logger::debug("ApplicationManager constructor called");
+    LOGGER_DEBUG("ApplicationManager constructor called");
 }
 
 ApplicationManager::~ApplicationManager() {
     if (initialized) {
         shutdown();
     }
-    Logger::debug("ApplicationManager destructor completed");
+    LOGGER_DEBUG("ApplicationManager destructor completed");
 }
 
 ApplicationManager& ApplicationManager::getInstance() {
@@ -42,7 +42,7 @@ ApplicationManager& ApplicationManager::getInstance() {
 
 bool ApplicationManager::initialize(const std::string& configPath) {
     if (initialized) {
-        Logger::warning("Application manager already initialized");
+        LOGGER_WARNING("Application manager already initialized");
         return true;
     }
 
@@ -71,12 +71,12 @@ bool ApplicationManager::initialize(const std::string& configPath) {
     }
 
     // **现在Logger已经完全初始化，可以安全地记录日志**
-    Logger::info("Initializing application manager...");
+    LOGGER_INFO("Initializing application manager...");
 
     if (config_loaded) {
-        Logger::info("Configuration loaded successfully from: " + configFilePath);
+        LOGGER_INFO("Configuration loaded successfully from: " + configFilePath);
     } else {
-        Logger::warning("Configuration loading failed, using default configuration");
+        LOGGER_WARNING("Configuration loading failed, using default configuration");
         // 尝试重新加载配置（这次记录详细错误）
         ExceptionHandler::execute("Loading configuration file", [&]() {
             if (!AppConfig::loadFromFile(configFilePath)) {
@@ -93,7 +93,7 @@ bool ApplicationManager::initialize(const std::string& configPath) {
     concurrencyConfig_.modelAcquireTimeoutMs = config.modelAcquireTimeoutMs;
     concurrencyConfig_.enableConcurrencyMonitoring = config.enableConcurrencyMonitoring;
 
-    Logger::info("Concurrency configuration loaded - max_concurrent: " +
+    LOGGER_INFO("Concurrency configuration loaded - max_concurrent: " +
                  std::to_string(concurrencyConfig_.maxConcurrentRequests) +
                  ", pool_size: " + std::to_string(concurrencyConfig_.modelPoolSize) +
                  ", acquire_timeout: " + std::to_string(concurrencyConfig_.modelAcquireTimeoutMs) + "ms");
@@ -102,9 +102,9 @@ bool ApplicationManager::initialize(const std::string& configPath) {
     if (concurrencyConfig_.enableConcurrencyMonitoring) {
         httpMonitor_ = std::make_unique<ConcurrencyMonitor>();
         grpcMonitor_ = std::make_unique<ConcurrencyMonitor>();
-        Logger::info("Concurrency monitoring enabled");
+        LOGGER_INFO("Concurrency monitoring enabled");
     } else {
-        Logger::info("Concurrency monitoring disabled");
+        LOGGER_INFO("Concurrency monitoring disabled");
     }
 
     // 初始化模型池而不是单个模型
@@ -115,37 +115,37 @@ bool ApplicationManager::initialize(const std::string& configPath) {
     });
 
     if (!pools_initialized) {
-        Logger::warning("Model pool initialization failed, program will continue running...");
+        LOGGER_WARNING("Model pool initialization failed, program will continue running...");
     }
 
     // 从注册表注册所有gRPC服务
     bool services_registered = registerGrpcServicesFromRegistry();
     if (!services_registered) {
-        Logger::warning("gRPC service registration failed, program will continue but gRPC functionality might be unavailable");
+        LOGGER_WARNING("gRPC service registration failed, program will continue but gRPC functionality might be unavailable");
     }
 
     // 初始化gRPC服务器
     bool grpc_initialized = initializeGrpcServer();
     if (!grpc_initialized) {
-        Logger::warning("gRPC server initialization failed, program will continue without gRPC functionality");
+        LOGGER_WARNING("gRPC server initialization failed, program will continue without gRPC functionality");
     }
 
     // 初始化路由
     bool routes_initialized = initializeRoutes();
     if (!routes_initialized) {
-        Logger::error("Route initialization failed");
+        LOGGER_ERROR("Route initialization failed");
         return false;
     }
 
     // 启动HTTP服务器
     bool http_started = startHttpServer();
     if (!http_started) {
-        Logger::error("HTTP server start failed");
+        LOGGER_ERROR("HTTP server start failed");
         return false;
     }
 
     initialized = true;
-    Logger::info("Application manager initialized successfully");
+    LOGGER_INFO("Application manager initialized successfully");
 
     // 记录初始化摘要
     logInitializationSummary();
@@ -158,34 +158,34 @@ void ApplicationManager::shutdown() {
         return;
     }
 
-    Logger::info("Shutting down application manager...");
+    LOGGER_INFO("Shutting down application manager...");
 
     // 停止HTTP服务器
     if (httpServer && httpServer->isRunning()) {
-        Logger::info("Stopping HTTP server...");
+        LOGGER_INFO("Stopping HTTP server...");
         httpServer->stop();
     }
 
     // 停止gRPC服务器
     if (grpcServer) {
-        Logger::info("Stopping gRPC server...");
+        LOGGER_INFO("Stopping gRPC server...");
         grpcServer->stop();
     }
 
     // 关闭所有模型池
     {
         std::unique_lock<std::shared_mutex> lock(modelPoolsMutex_);
-        Logger::info("Shutting down " + std::to_string(modelPools_.size()) + " model pools...");
+        LOGGER_INFO("Shutting down " + std::to_string(modelPools_.size()) + " model pools...");
 
         for (auto& pair : modelPools_) {
             if (pair.second) {
-                Logger::info("Shutting down model pool for type: " + std::to_string(pair.first));
+                LOGGER_INFO("Shutting down model pool for type: " + std::to_string(pair.first));
                 pair.second->shutdown();
             }
         }
 
         modelPools_.clear();
-        Logger::info("All model pools shutdown completed");
+        LOGGER_INFO("All model pools shutdown completed");
     }
 
     // 清理gRPC服务初始化器
@@ -195,7 +195,7 @@ void ApplicationManager::shutdown() {
     // 清理并发监控器
     if (httpMonitor_) {
         auto httpStats = httpMonitor_->getStats();
-        Logger::info("HTTP final stats - total: " + std::to_string(httpStats.total) +
+        LOGGER_INFO("HTTP final stats - total: " + std::to_string(httpStats.total) +
                      ", failed: " + std::to_string(httpStats.failed) +
                      ", failure_rate: " + std::to_string(httpStats.failureRate * 100) + "%");
         httpMonitor_.reset();
@@ -203,14 +203,14 @@ void ApplicationManager::shutdown() {
 
     if (grpcMonitor_) {
         auto grpcStats = grpcMonitor_->getStats();
-        Logger::info("gRPC final stats - total: " + std::to_string(grpcStats.total) +
+        LOGGER_INFO("gRPC final stats - total: " + std::to_string(grpcStats.total) +
                      ", failed: " + std::to_string(grpcStats.failed) +
                      ", failure_rate: " + std::to_string(grpcStats.failureRate * 100) + "%");
         grpcMonitor_.reset();
     }
 
     // 关闭日志系统
-    Logger::info("Application manager shutdown completed");
+    LOGGER_INFO("Application manager shutdown completed");
     Logger::shutdown();
 
     initialized = false;
@@ -221,13 +221,13 @@ const HTTPServerConfig& ApplicationManager::getHTTPServerConfig() const {
 }
 
 bool ApplicationManager::initializeModelPools() {
-    Logger::info("Starting model pool initialization...");
+    LOGGER_INFO("Starting model pool initialization...");
 
     // 获取所有模型配置
     const auto& modelConfigs = AppConfig::getModelConfigs();
 
     if (modelConfigs.empty()) {
-        Logger::warning("No model configuration found");
+        LOGGER_WARNING("No model configuration found");
         return true; // 没有模型也不是错误
     }
 
@@ -237,7 +237,7 @@ bool ApplicationManager::initializeModelPools() {
     // 清理现有模型池
     modelPools_.clear();
 
-    Logger::info("Found " + std::to_string(modelConfigs.size()) +
+    LOGGER_INFO("Found " + std::to_string(modelConfigs.size()) +
                  " model configurations, initializing pools with size " +
                  std::to_string(concurrencyConfig_.modelPoolSize));
 
@@ -246,7 +246,7 @@ bool ApplicationManager::initializeModelPools() {
         bool pool_initialized = ExceptionHandler::execute(
                 "初始化模型池: " + config.name,
                 [&]() {
-                    Logger::info("Initializing model pool: " + config.name +
+                    LOGGER_INFO("Initializing model pool: " + config.name +
                                  " (type: " + std::to_string(config.model_type) +
                                  ", path: " + config.model_path + ")");
 
@@ -280,7 +280,7 @@ bool ApplicationManager::initializeModelPools() {
 
                     // 检查模型类型是否已存在
                     if (modelPools_.find(config.model_type) != modelPools_.end()) {
-                        Logger::warning("Model type " + std::to_string(config.model_type) +
+                        LOGGER_WARNING("Model type " + std::to_string(config.model_type) +
                                         " already exists, skipping " + config.name);
                         return;
                     }
@@ -295,7 +295,7 @@ bool ApplicationManager::initializeModelPools() {
                     // 存储模型池
                     modelPools_[config.model_type] = std::move(pool);
 
-                    Logger::info("Model pool initialized successfully: " + config.name +
+                    LOGGER_INFO("Model pool initialized successfully: " + config.name +
                                  " (type: " + std::to_string(config.model_type) + ") with " +
                                  std::to_string(concurrencyConfig_.modelPoolSize) + " instances");
                 }
@@ -303,16 +303,16 @@ bool ApplicationManager::initializeModelPools() {
 
         if (!pool_initialized) {
             all_success = false;
-            Logger::error("Model pool initialization failed: " + config.name +
+            LOGGER_ERROR("Model pool initialization failed: " + config.name +
                           ", continuing with initializing other model pools");
         }
     }
 
     if (all_success) {
-        Logger::info("All model pools initialized successfully, total pools: " +
+        LOGGER_INFO("All model pools initialized successfully, total pools: " +
                      std::to_string(modelPools_.size()));
     } else {
-        Logger::warning("Some model pools failed to initialize, please check logs");
+        LOGGER_WARNING("Some model pools failed to initialize, please check logs");
     }
 
     return all_success;
@@ -336,25 +336,28 @@ bool ApplicationManager::executeModelInference(int modelType,
                                                const cv::Mat& imageData,
                                                std::vector<std::vector<std::any>>& results,
                                                std::vector<std::string>& plateResults,
+                                               double startValue,
+                                               double endValue,
+                                               double& targetResult,
                                                int timeoutMs) {
 
     if (timeoutMs <= 0) {
         timeoutMs = concurrencyConfig_.modelAcquireTimeoutMs;
     }
 
-    Logger::debug("Executing model inference for type: " + std::to_string(modelType) +
+    LOGGER_DEBUG("Executing model inference for type: " + std::to_string(modelType) +
                   ", timeout: " + std::to_string(timeoutMs) + "ms");
 
     std::shared_lock<std::shared_mutex> lock(modelPoolsMutex_);
 
     auto poolIt = modelPools_.find(modelType);
     if (poolIt == modelPools_.end()) {
-        Logger::error("Model pool not found for type: " + std::to_string(modelType));
+        LOGGER_ERROR("Model pool not found for type: " + std::to_string(modelType));
         return false;
     }
 
     if (!poolIt->second->isEnabled()) {
-        Logger::warning("Model pool disabled for type: " + std::to_string(modelType));
+        LOGGER_WARNING("Model pool disabled for type: " + std::to_string(modelType));
         return false;
     }
 
@@ -362,7 +365,7 @@ bool ApplicationManager::executeModelInference(int modelType,
 
     // 记录模型池状态
     auto poolStatus = poolIt->second->getStatus();
-    Logger::debug("Model pool status for type " + std::to_string(modelType) +
+    LOGGER_DEBUG("Model pool status for type " + std::to_string(modelType) +
                   " - available: " + std::to_string(poolStatus.availableModels) +
                   "/" + std::to_string(poolStatus.totalModels));
 
@@ -370,7 +373,7 @@ bool ApplicationManager::executeModelInference(int modelType,
     ModelAcquirer acquirer(*poolIt->second, timeoutMs);
 
     if (!acquirer.isValid()) {
-        Logger::error("Failed to acquire model from pool within timeout (" +
+        LOGGER_ERROR("Failed to acquire model from pool within timeout (" +
                       std::to_string(timeoutMs) + "ms) for type: " + std::to_string(modelType));
         return false;
     }
@@ -379,10 +382,13 @@ bool ApplicationManager::executeModelInference(int modelType,
         // 安全地使用模型进行推理
         acquirer->ori_img = imageData;
 
-        Logger::debug("Starting model inference for type: " + std::to_string(modelType));
+        acquirer->startValue = startValue;
+        acquirer->endValue = endValue;
+
+        LOGGER_DEBUG("Starting model inference for type: " + std::to_string(modelType));
 
         if (!acquirer->interf()) {
-            Logger::error("Model inference failed for type: " + std::to_string(modelType));
+            LOGGER_ERROR("Model inference failed for type: " + std::to_string(modelType));
             return false;
         }
 
@@ -390,26 +396,28 @@ bool ApplicationManager::executeModelInference(int modelType,
 //        results = acquirer->results_vector;
         results = std::move(acquirer->results_vector);
 
-        if (modelType == 1) {
+        if (modelType == 4) {
             plateResults = acquirer->plateResults;
-            Logger::debug("Retrieved " + std::to_string(plateResults.size()) + " plate results");
+            LOGGER_DEBUG("Retrieved " + std::to_string(plateResults.size()) + " plate results");
+        } else if (modelType == 5) {
+            targetResult = acquirer->value;
         }
 
         // 清空原始向量以释放内存
         acquirer->results_vector.clear();
         acquirer->results_vector.shrink_to_fit();
 
-        if (modelType == 1) {
+        if (modelType == 4) {
             acquirer->plateResults.clear();
             acquirer->plateResults.shrink_to_fit();
         }
 
-        Logger::debug("Model inference completed successfully for type: " +
+        LOGGER_DEBUG("Model inference completed successfully for type: " +
                       std::to_string(modelType) + ", results count: " + std::to_string(results.size()));
         return true;
 
     } catch (const std::exception& e) {
-        Logger::error("Model inference exception for type " + std::to_string(modelType) +
+        LOGGER_ERROR("Model inference exception for type " + std::to_string(modelType) +
                       ": " + std::string(e.what()));
         return false;
     }
@@ -420,12 +428,12 @@ bool ApplicationManager::setModelEnabled(int modelType, bool enabled) {
 
     auto poolIt = modelPools_.find(modelType);
     if (poolIt == modelPools_.end()) {
-        Logger::error("Model pool not found for type: " + std::to_string(modelType));
+        LOGGER_ERROR("Model pool not found for type: " + std::to_string(modelType));
         return false;
     }
 
     poolIt->second->setEnabled(enabled);
-    Logger::info("Model pool " + std::to_string(modelType) +
+    LOGGER_INFO("Model pool " + std::to_string(modelType) +
                  " status changed to: " + (enabled ? "enabled" : "disabled"));
     return true;
 }
@@ -530,44 +538,44 @@ const ConcurrencyConfig& ApplicationManager::getConcurrencyConfig() const {
 // gRPC服务方法实现
 void ApplicationManager::registerGrpcServiceInitializer(std::unique_ptr<GrpcServiceInitializerBase> initializer) {
     if (initializer) {
-        Logger::info("Registering gRPC service initializer: " + initializer->getServiceName());
+        LOGGER_INFO("Registering gRPC service initializer: " + initializer->getServiceName());
         grpcServiceInitializers.push_back(std::move(initializer));
     }
 }
 
 bool ApplicationManager::initializeGrpcServices() {
     if (!grpcServer) {
-        Logger::error("Cannot initialize gRPC services: server not created");
+        LOGGER_ERROR("Cannot initialize gRPC services: server not created");
         return false;
     }
 
     if (grpcServiceInitializers.empty()) {
-        Logger::warning("No gRPC service initializers to process");
+        LOGGER_WARNING("No gRPC service initializers to process");
         return true;
     }
 
     bool allSucceeded = true;
 
-    Logger::info("Initializing " + std::to_string(grpcServiceInitializers.size()) + " gRPC services");
+    LOGGER_INFO("Initializing " + std::to_string(grpcServiceInitializers.size()) + " gRPC services");
 
     for (const auto& initializer : grpcServiceInitializers) {
         if (initializer) {
-            Logger::info("Initializing gRPC service: " + initializer->getServiceName());
+            LOGGER_INFO("Initializing gRPC service: " + initializer->getServiceName());
 
             if (!initializer->initialize(grpcServer.get())) {
-                Logger::error("Failed to initialize gRPC service: " + initializer->getServiceName());
+                LOGGER_ERROR("Failed to initialize gRPC service: " + initializer->getServiceName());
                 allSucceeded = false;
                 // 继续初始化其他服务，即使一个失败
             } else {
-                Logger::info("Successfully initialized gRPC service: " + initializer->getServiceName());
+                LOGGER_INFO("Successfully initialized gRPC service: " + initializer->getServiceName());
             }
         }
     }
 
     if (allSucceeded) {
-        Logger::info("All gRPC services initialized successfully");
+        LOGGER_INFO("All gRPC services initialized successfully");
     } else {
-        Logger::warning("Some gRPC services failed to initialize");
+        LOGGER_WARNING("Some gRPC services failed to initialize");
     }
 
     return allSucceeded;
@@ -575,7 +583,7 @@ bool ApplicationManager::initializeGrpcServices() {
 
 bool ApplicationManager::registerGrpcServicesFromRegistry() {
     return ExceptionHandler::execute("Registering gRPC services from registry", [&]() {
-        Logger::info("Registering gRPC services from registry");
+        LOGGER_INFO("Registering gRPC services from registry");
         auto& registry = GrpcServiceRegistry::getInstance();
 
         // 使用工厂初始化所有服务
@@ -585,9 +593,9 @@ bool ApplicationManager::registerGrpcServicesFromRegistry() {
         bool result = registry.registerAllServices(*this);
 
         if (result) {
-            Logger::info("Successfully registered all gRPC services from registry");
+            LOGGER_INFO("Successfully registered all gRPC services from registry");
         } else {
-            Logger::warning("Failed to register some gRPC services from registry");
+            LOGGER_WARNING("Failed to register some gRPC services from registry");
         }
 
         return result;
@@ -597,36 +605,36 @@ bool ApplicationManager::registerGrpcServicesFromRegistry() {
 bool ApplicationManager::initializeGrpcServer() {
     return ExceptionHandler::execute("Initializing gRPC server", [&]() {
         std::string grpcAddress = getGrpcServerAddress();
-        Logger::info("Initializing gRPC server, address: " + grpcAddress);
+        LOGGER_INFO("Initializing gRPC server, address: " + grpcAddress);
 
         // 创建gRPC服务器
         grpcServer = std::make_unique<GrpcServer>(grpcAddress);
 
         // 初始化注册的服务
         if (!initializeGrpcServices()) {
-            Logger::warning("Some gRPC services failed to initialize");
+            LOGGER_WARNING("Some gRPC services failed to initialize");
         }
 
         // 启动服务器
         if (!grpcServer->start()) {
-            Logger::warning("Failed to start gRPC server at " + grpcAddress +
+            LOGGER_WARNING("Failed to start gRPC server at " + grpcAddress +
                             ", will continue running without gRPC functionality");
             return false;
         }
 
-        Logger::info("gRPC server successfully started at " + grpcAddress);
+        LOGGER_INFO("gRPC server successfully started at " + grpcAddress);
         return true;
     });
 }
 
 bool ApplicationManager::initializeRoutes() {
     return ExceptionHandler::execute("Initializing routes", [&]() {
-        Logger::info("Initializing HTTP routes");
+        LOGGER_INFO("Initializing HTTP routes");
 
         // 初始化所有路由组
         RouteInitializer::initializeRoutes();
 
-        Logger::info("HTTP routes initialized successfully");
+        LOGGER_INFO("HTTP routes initialized successfully");
         return true;
     });
 }
@@ -634,71 +642,71 @@ bool ApplicationManager::initializeRoutes() {
 bool ApplicationManager::startHttpServer() {
     return ExceptionHandler::execute("Starting HTTP server", [&]() {
         const auto& httpConfig = getHTTPServerConfig();
-        Logger::info("Creating HTTP server with config: " + httpConfig.host + ":" +
+        LOGGER_INFO("Creating HTTP server with config: " + httpConfig.host + ":" +
                      std::to_string(httpConfig.port));
 
         // 创建HTTP服务器
         httpServer = std::make_unique<HttpServer>(httpConfig);
 
         // 配置所有路由
-        Logger::info("Configuring HTTP routes");
+        LOGGER_INFO("Configuring HTTP routes");
         RouteManager::getInstance().configureRoutes(*httpServer);
 
         // 启动服务器
-        Logger::info("Starting HTTP server...");
+        LOGGER_INFO("Starting HTTP server...");
         if (!httpServer->start()) {
-            Logger::error("Failed to start HTTP server");
+            LOGGER_ERROR("Failed to start HTTP server");
             return false;
         }
 
-        Logger::info("HTTP server successfully started at " + httpConfig.host + ":" +
+        LOGGER_INFO("HTTP server successfully started at " + httpConfig.host + ":" +
                      std::to_string(httpConfig.port));
         return true;
     });
 }
 
 void ApplicationManager::logInitializationSummary() {
-    Logger::info("=== Application Manager Initialization Summary ===");
+    LOGGER_INFO("=== Application Manager Initialization Summary ===");
 
     // HTTP服务器状态
     if (httpServer && httpServer->isRunning()) {
         const auto& httpConfig = getHTTPServerConfig();
-        Logger::info("✓ HTTP Server: Running at " + httpConfig.host + ":" + std::to_string(httpConfig.port));
+        LOGGER_INFO("✓ HTTP Server: Running at " + httpConfig.host + ":" + std::to_string(httpConfig.port));
 
         // 统计路由数量
         const auto& routes = httpServer->getRoutes();
-        Logger::info("  - Routes registered: " + std::to_string(routes.size()));
+        LOGGER_INFO("  - Routes registered: " + std::to_string(routes.size()));
     } else {
-        Logger::info("✗ HTTP Server: Not running");
+        LOGGER_INFO("✗ HTTP Server: Not running");
     }
 
     // gRPC服务器状态
     if (grpcServer && grpcServer->isRunning()) {
-        Logger::info("✓ gRPC Server: Running at " + getGrpcServerAddress());
-        Logger::info("  - Services registered: " + std::to_string(grpcServiceInitializers.size()));
+        LOGGER_INFO("✓ gRPC Server: Running at " + getGrpcServerAddress());
+        LOGGER_INFO("  - Services registered: " + std::to_string(grpcServiceInitializers.size()));
     } else {
-        Logger::info("✗ gRPC Server: Not running");
+        LOGGER_INFO("✗ gRPC Server: Not running");
     }
 
     // 模型池状态
     {
         std::shared_lock<std::shared_mutex> lock(modelPoolsMutex_);
-        Logger::info("✓ Model Pools: " + std::to_string(modelPools_.size()) + " pools initialized");
+        LOGGER_INFO("✓ Model Pools: " + std::to_string(modelPools_.size()) + " pools initialized");
 
         for (const auto& pair : modelPools_) {
             auto status = pair.second->getStatus();
-            Logger::info("  - Type " + std::to_string(pair.first) + ": " +
+            LOGGER_INFO("  - Type " + std::to_string(pair.first) + ": " +
                          std::to_string(status.totalModels) + " instances, " +
                          (status.isEnabled ? "enabled" : "disabled"));
         }
     }
 
     // 并发配置
-    Logger::info("✓ Concurrency Config:");
-    Logger::info("  - Max concurrent requests: " + std::to_string(concurrencyConfig_.maxConcurrentRequests));
-    Logger::info("  - Model pool size: " + std::to_string(concurrencyConfig_.modelPoolSize));
-    Logger::info("  - Model acquire timeout: " + std::to_string(concurrencyConfig_.modelAcquireTimeoutMs) + "ms");
-    Logger::info("  - Monitoring: " + std::string(concurrencyConfig_.enableConcurrencyMonitoring ? "enabled" : "disabled"));
+    LOGGER_INFO("✓ Concurrency Config:");
+    LOGGER_INFO("  - Max concurrent requests: " + std::to_string(concurrencyConfig_.maxConcurrentRequests));
+    LOGGER_INFO("  - Model pool size: " + std::to_string(concurrencyConfig_.modelPoolSize));
+    LOGGER_INFO("  - Model acquire timeout: " + std::to_string(concurrencyConfig_.modelAcquireTimeoutMs) + "ms");
+    LOGGER_INFO("  - Monitoring: " + std::string(concurrencyConfig_.enableConcurrencyMonitoring ? "enabled" : "disabled"));
 
-    Logger::info("=== Initialization Summary End ===");
+    LOGGER_INFO("=== Initialization Summary End ===");
 }

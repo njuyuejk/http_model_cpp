@@ -59,19 +59,19 @@ void HttpServer::registerRoutes() {
     for (const auto& route : routes) {
         if (route.method == "GET") {
             server.Get(route.pattern, route.handler);
-            Logger::get_instance().info("Registering route: GET " + route.pattern +
+            Logger::info("Registering route: GET " + route.pattern +
                                         (route.description.empty() ? "" : " - " + route.description));
         } else if (route.method == "POST") {
             server.Post(route.pattern, route.handler);
-            Logger::get_instance().info("Registering route: POST " + route.pattern +
+            Logger::info("Registering route: POST " + route.pattern +
                                         (route.description.empty() ? "" : " - " + route.description));
         } else if (route.method == "PUT") {
             server.Put(route.pattern, route.handler);
-            Logger::get_instance().info("Registering route: PUT " + route.pattern +
+            Logger::info("Registering route: PUT " + route.pattern +
                                         (route.description.empty() ? "" : " - " + route.description));
         } else if (route.method == "DELETE") {
             server.Delete(route.pattern, route.handler);
-            Logger::get_instance().info("Registering route: DELETE " + route.pattern +
+            Logger::info("Registering route: DELETE " + route.pattern +
                                         (route.description.empty() ? "" : " - " + route.description));
         }
     }
@@ -79,14 +79,14 @@ void HttpServer::registerRoutes() {
 
 bool HttpServer::start() {
     if (running) {
-        Logger::get_instance().warning("Server is already running");
+        Logger::warning("Server is already running");
         return true;
     }
 
     // 在启动前注册所有路由
     registerRoutes();
 
-    Logger::get_instance().info("Starting server " + config.host + ":" + std::to_string(config.port));
+    Logger::info("Starting server " + config.host + ":" + std::to_string(config.port));
 
     // 设置超时（如果配置有指定）
     if (config.connectionTimeout > 0) {
@@ -104,18 +104,18 @@ bool HttpServer::start() {
         running = true;
         serverStarted = true;
 
-        Logger::get_instance().info("HTTP server thread started, listening on " +
+        Logger::info("HTTP server thread started, listening on " +
                                     config.host + ":" + std::to_string(config.port));
 
         // 这里会阻塞直到服务器停止
         bool success = server.listen(config.host.c_str(), config.port);
 
         if (!success) {
-            Logger::get_instance().error("HTTP server listen returned false");
+            Logger::error("HTTP server listen returned false");
         }
 
         running = false;
-        Logger::get_instance().info("HTTP server thread ended");
+        Logger::info("HTTP server thread ended");
     });
 
     // 等待服务器启动
@@ -126,10 +126,10 @@ bool HttpServer::start() {
     }
 
     if (serverStarted) {
-        Logger::get_instance().info("HTTP server successfully started");
+        Logger::info("HTTP server successfully started");
         return true;
     } else {
-        Logger::get_instance().error("HTTP server failed to start within timeout");
+        Logger::error("HTTP server failed to start within timeout");
         if (serverThread && serverThread->joinable()) {
             server.stop();
             serverThread->join();
@@ -152,7 +152,7 @@ void HttpServer::stop() {
         return;
     }
 
-    Logger::get_instance().info("Stopping server");
+    Logger::info("Stopping server");
     server.stop();
 
     if (serverThread && serverThread->joinable()) {

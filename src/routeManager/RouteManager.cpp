@@ -19,20 +19,20 @@ RouteManager& RouteManager::getInstance() {
 
 bool RouteManager::addGroup(std::shared_ptr<RouteGroup> group) {
     if (!group) {
-        Logger::get_instance().warning("Attempt to add empty route group");
+        Logger::warning("Attempt to add empty route group");
         return false;
     }
 
     const auto& name = group->getName();
     if (groupIndex.find(name) != groupIndex.end()) {
-        Logger::get_instance().warning("Route group already exists: " + name);
+        Logger::warning("Route group already exists: " + name);
         return false;
     }
 
     routeGroups.push_back(group);
     groupIndex[name] = group;
 
-    Logger::get_instance().info("Added route group: " + name + ", base path: " + group->getBasePath());
+    Logger::info("Added route group: " + name + ", base path: " + group->getBasePath());
     return true;
 }
 
@@ -45,11 +45,11 @@ std::shared_ptr<RouteGroup> RouteManager::getGroup(const std::string& name) cons
 }
 
 void RouteManager::configureRoutes(HttpServer& server) {
-    Logger::get_instance().info("Configuring all route groups...");
+    Logger::info("Configuring all route groups...");
 
     for (const auto& group : routeGroups) {
         ExceptionHandler::execute("Configuring route group: " + group->getName(), [&]() {
-            Logger::get_instance().info("Configuring route group: " + group->getName());
+            Logger::info("Configuring route group: " + group->getName());
             group->registerRoutes(server);
         });
     }
@@ -65,5 +65,5 @@ void RouteManager::configureRoutes(HttpServer& server) {
         }
     });
 
-    Logger::get_instance().info("All route configurations completed");
+    Logger::info("All route configurations completed");
 }

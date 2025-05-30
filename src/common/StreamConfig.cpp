@@ -87,20 +87,20 @@ bool AppConfig::loadFromFile(const std::string& configFilePath) {
             // 加载HTTP服务器配置
             if (general.contains("http_server") && general["http_server"].is_object()) {
                 httpServerConfig = HTTPServerConfig::fromJson(general["http_server"]);
-                Logger::info("Loading HTTP server configuration: " + httpServerConfig.host + ":" +
+                LOGGER_INFO("Loading HTTP server configuration: " + httpServerConfig.host + ":" +
                              std::to_string(httpServerConfig.port));
             }
 
             if (general.contains("grpc_server") && general["grpc_server"].is_object()) {
                 grpcServerConfig = GRPCServerConfig::fromJson(general["grpc_server"]);
-                Logger::info("Loading gRPC server configuration: " + grpcServerConfig.host + ":" +
+                LOGGER_INFO("Loading gRPC server configuration: " + grpcServerConfig.host + ":" +
                              std::to_string(grpcServerConfig.port));
             }
 
             // 加载并发配置
             if (general.contains("concurrency") && general["concurrency"].is_object()) {
                 concurrencyConfig = ConcurrencyServerConfig::fromJson(general["concurrency"]);
-                Logger::info("Loading concurrency configuration: pool_size=" +
+                LOGGER_INFO("Loading concurrency configuration: pool_size=" +
                              std::to_string(concurrencyConfig.modelPoolSize) +
                              ", max_concurrent=" + std::to_string(concurrencyConfig.maxConcurrentRequests));
             }
@@ -112,7 +112,7 @@ bool AppConfig::loadFromFile(const std::string& configFilePath) {
                 ModelConfig config = ModelConfig::fromJson(modelJson);
                 if (!config.name.empty()) {
                     modelConfigs.push_back(config);
-                    Logger::info("Loading model configuration: " + config.name);
+                    LOGGER_INFO("Loading model configuration: " + config.name);
                 }
             }
         }
@@ -120,11 +120,11 @@ bool AppConfig::loadFromFile(const std::string& configFilePath) {
         return true;
     }
     catch (const json::exception& e) {
-        Logger::error("JSON parsing error: " + std::string(e.what()));
+        LOGGER_ERROR("JSON parsing error: " + std::string(e.what()));
         return false;
     }
     catch (const std::exception& e) {
-        Logger::error("Error loading configuration file: " + std::string(e.what()));
+        LOGGER_ERROR("Error loading configuration file: " + std::string(e.what()));
         return false;
     }
 }
@@ -188,11 +188,11 @@ bool AppConfig::saveToFile(const std::string& configFilePath) {
         return true;
     }
     catch (const json::exception& e) {
-        Logger::error("JSON error when saving configuration: " + std::string(e.what()));
+        LOGGER_ERROR("JSON error when saving configuration: " + std::string(e.what()));
         return false;
     }
     catch (const std::exception& e) {
-        Logger::error("Error saving configuration file: " + std::string(e.what()));
+        LOGGER_ERROR("Error saving configuration file: " + std::string(e.what()));
         return false;
     }
 }

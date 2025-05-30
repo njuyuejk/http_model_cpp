@@ -22,22 +22,22 @@ GrpcServiceRegistry& GrpcServiceRegistry::getInstance() {
 
 void GrpcServiceRegistry::registerInitializer(std::unique_ptr<GrpcServiceInitializerBase> initializer) {
     if (initializer) {
-        Logger::info("Adding gRPC service initializer to registry: " + initializer->getServiceName());
+        LOGGER_INFO("Adding gRPC service initializer to registry: " + initializer->getServiceName());
         initializers_.push_back(std::move(initializer));
     }
 }
 
 bool GrpcServiceRegistry::registerAllServices(ApplicationManager& appManager) {
     if (initializers_.empty()) {
-        Logger::warning("No gRPC service initializers to register");
+        LOGGER_WARNING("No gRPC service initializers to register");
         return true;  // 没有服务也算成功，而不是失败
     }
 
-    Logger::info("Starting registration of " + std::to_string(initializers_.size()) + " gRPC services");
+    LOGGER_INFO("Starting registration of " + std::to_string(initializers_.size()) + " gRPC services");
 
     for (auto& initializer : initializers_) {
         if (initializer) {
-            Logger::info("Registering gRPC service: " + initializer->getServiceName());
+            LOGGER_INFO("Registering gRPC service: " + initializer->getServiceName());
             appManager.registerGrpcServiceInitializer(std::move(initializer));
         }
     }
