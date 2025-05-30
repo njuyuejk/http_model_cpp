@@ -16,10 +16,10 @@ GrpcClient::GrpcClient(const std::string& server_address) {
         // 创建状态监控服务存根
         status_stub_ = grpc_service::StatusService::NewStub(channel);
 
-        Logger::info("gRPC client initialized, server address: " + server_address);
+        LOGGER_INFO("gRPC client initialized, server address: " + server_address);
     }
     catch (const std::exception& e) {
-        Logger::error("gRPC client initialization failed: " + std::string(e.what()));
+        LOGGER_ERROR("gRPC client initialization failed: " + std::string(e.what()));
         throw;
     }
 }
@@ -42,18 +42,18 @@ bool GrpcClient::processImage(const std::string& base64_image,
     grpc::ClientContext context;
 
     // 调用RPC
-    Logger::info("Sending gRPC ProcessImage request, model_type=" + std::to_string(model_type));
+    LOGGER_INFO("Sending gRPC ProcessImage request, model_type=" + std::to_string(model_type));
     grpc::Status status = stub_->ProcessImage(&context, request, &response);
 
     if (!status.ok()) {
         error_message = status.error_message();
-        Logger::error("gRPC ProcessImage failed: " + error_message);
+        LOGGER_ERROR("gRPC ProcessImage failed: " + error_message);
         return false;
     }
 
     if (!response.success()) {
         error_message = response.message();
-        Logger::error("ProcessImage reported failure: " + error_message);
+        LOGGER_ERROR("ProcessImage reported failure: " + error_message);
         return false;
     }
 
@@ -73,7 +73,7 @@ bool GrpcClient::processImage(const std::string& base64_image,
         plate_results.push_back(plate);
     }
 
-    Logger::info("gRPC ProcessImage successfully completed");
+    LOGGER_INFO("gRPC ProcessImage successfully completed");
     return true;
 }
 
@@ -96,24 +96,24 @@ bool GrpcClient::controlModel(const std::string& model_name,
     grpc::ClientContext context;
 
     // 调用RPC
-    Logger::info("Sending gRPC ControlModel request, model_type=" +
+    LOGGER_INFO("Sending gRPC ControlModel request, model_type=" +
                  std::to_string(model_type) + ", enable=" + (enable ? "true" : "false"));
     grpc::Status status = stub_->ControlModel(&context, request, &response);
 
     if (!status.ok()) {
         error_message = status.error_message();
-        Logger::error("gRPC ControlModel failed: " + error_message);
+        LOGGER_ERROR("gRPC ControlModel failed: " + error_message);
         return false;
     }
 
     if (!response.success()) {
         error_message = "Control model failed";
-        Logger::error("ControlModel reported failure");
+        LOGGER_ERROR("ControlModel reported failure");
         return false;
     }
 
     current_status = response.enabled();
-    Logger::info("gRPC ControlModel successfully completed");
+    LOGGER_INFO("gRPC ControlModel successfully completed");
     return true;
 }
 

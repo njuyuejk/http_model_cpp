@@ -296,6 +296,9 @@ bool ApplicationManager::executeModelInference(int modelType,
                                                const cv::Mat& imageData,
                                                std::vector<std::vector<std::any>>& results,
                                                std::vector<std::string>& plateResults,
+                                               double startValue,
+                                               double endValue,
+                                               double& targetResult,
                                                int timeoutMs) {
 
     if (timeoutMs <= 0) {
@@ -339,6 +342,9 @@ bool ApplicationManager::executeModelInference(int modelType,
         // 安全地使用模型进行推理
         acquirer->ori_img = imageData;
 
+        acquirer->startValue = startValue;
+        acquirer->endValue = endValue;
+
         Logger::debug("Starting model inference for type: " + std::to_string(modelType));
 
         if (!acquirer->interf()) {
@@ -350,16 +356,18 @@ bool ApplicationManager::executeModelInference(int modelType,
 //        results = acquirer->results_vector;
         results = std::move(acquirer->results_vector);
 
-        if (modelType == 1) {
+        if (modelType == 4) {
             plateResults = acquirer->plateResults;
             Logger::debug("Retrieved " + std::to_string(plateResults.size()) + " plate results");
+        } else if (modelType == 5) {
+            targetResult = acquirer->value;
         }
 
         // 清空原始向量以释放内存
         acquirer->results_vector.clear();
         acquirer->results_vector.shrink_to_fit();
 
-        if (modelType == 1) {
+        if (modelType == 4) {
             acquirer->plateResults.clear();
             acquirer->plateResults.shrink_to_fit();
         }

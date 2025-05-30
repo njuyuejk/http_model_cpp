@@ -26,7 +26,7 @@ grpc::Status AIModelServiceImpl::ProcessImage(
     appManager_.startGrpcRequest();
 
     try {
-        Logger::info("Received gRPC ProcessImage request, thread: " +
+        LOGGER_INFO("Received gRPC ProcessImage request, thread: " +
                      std::to_string(std::hash<std::thread::id>{}(requestId)));
 
         // 验证请求参数
@@ -72,7 +72,7 @@ grpc::Status AIModelServiceImpl::ProcessImage(
             return grpc::Status::OK;
         }
 
-        Logger::info("Processing gRPC image request - model_type: " + std::to_string(model_type) +
+        LOGGER_INFO("Processing gRPC image request - model_type: " + std::to_string(model_type) +
                      ", image_size: " + std::to_string(ori_img.cols) + "x" + std::to_string(ori_img.rows) +
                      ", thread: " + std::to_string(std::hash<std::thread::id>{}(requestId)));
 
@@ -131,7 +131,7 @@ grpc::Status AIModelServiceImpl::ProcessImage(
                         detection->add_values(static_cast<float>(std::any_cast<int>(value)));
                     }
                 } catch (const std::bad_any_cast& e) {
-                    Logger::warning("Failed to cast result value: " + std::string(e.what()) +
+                    LOGGER_WARNING("Failed to cast result value: " + std::string(e.what()) +
                                     ", thread: " + std::to_string(std::hash<std::thread::id>{}(requestId)));
                 }
             }
@@ -142,7 +142,7 @@ grpc::Status AIModelServiceImpl::ProcessImage(
             response->add_plate_results(plate);
         }
 
-        Logger::info("gRPC ProcessImage completed successfully - model_type: " +
+        LOGGER_INFO("gRPC ProcessImage completed successfully - model_type: " +
                      std::to_string(model_type) + ", time: " + std::to_string(duration.count()) + "ms" +
                      ", thread: " + std::to_string(std::hash<std::thread::id>{}(requestId)));
 
@@ -158,7 +158,7 @@ grpc::Status AIModelServiceImpl::ProcessImage(
 
     } catch (const std::exception& e) {
         appManager_.failGrpcRequest();
-        Logger::error("gRPC ProcessImage error: " + std::string(e.what()) +
+        LOGGER_ERROR("gRPC ProcessImage error: " + std::string(e.what()) +
                       ", thread: " + std::to_string(std::hash<std::thread::id>{}(requestId)));
         response->set_success(false);
         response->set_message("Internal error: " + std::string(e.what()));
@@ -177,7 +177,7 @@ grpc::Status AIModelServiceImpl::ControlModel(
     appManager_.startGrpcRequest();
 
     try {
-        Logger::info("Received gRPC ControlModel request, thread: " +
+        LOGGER_INFO("Received gRPC ControlModel request, thread: " +
                      std::to_string(std::hash<std::thread::id>{}(requestId)));
 
         std::string model_name = request->model_name();
@@ -209,7 +209,7 @@ grpc::Status AIModelServiceImpl::ControlModel(
             response->set_success(false);
             response->set_model_name(model_name);
             response->set_enabled(false);
-            Logger::warning("Model pool not found: model_type=" + std::to_string(model_type) +
+            LOGGER_WARNING("Model pool not found: model_type=" + std::to_string(model_type) +
                             ", thread: " + std::to_string(std::hash<std::thread::id>{}(requestId)));
             return grpc::Status(grpc::StatusCode::NOT_FOUND, "Model pool not found");
         }
@@ -222,7 +222,7 @@ grpc::Status AIModelServiceImpl::ControlModel(
         response->set_model_name(model_name);
         response->set_enabled(current_status);
 
-        Logger::info("Model pool control successful: model_type=" +
+        LOGGER_INFO("Model pool control successful: model_type=" +
                      std::to_string(model_type) + ", enabled=" +
                      (current_status ? "true" : "false") +
                      ", pool_size=" + std::to_string(poolStatus.totalModels) +
@@ -234,7 +234,7 @@ grpc::Status AIModelServiceImpl::ControlModel(
 
     } catch (const std::exception& e) {
         appManager_.failGrpcRequest();
-        Logger::error("gRPC ControlModel error: " + std::string(e.what()) +
+        LOGGER_ERROR("gRPC ControlModel error: " + std::string(e.what()) +
                       ", thread: " + std::to_string(std::hash<std::thread::id>{}(requestId)));
         response->set_success(false);
         response->set_enabled(false);

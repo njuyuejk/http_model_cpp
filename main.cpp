@@ -13,7 +13,7 @@ std::mutex g_exitMutex;
 // 信号处理函数
 void signalHandler(int signal) {
     if (signal == SIGINT || signal == SIGTERM) {
-        Logger::info("\nReceived termination signal (" + std::to_string(signal) + "), initiating shutdown...");
+        LOGGER_INFO("\nReceived termination signal (" + std::to_string(signal) + "), initiating shutdown...");
         g_shouldExit = true;
         g_exitCondition.notify_all();
     }
@@ -33,7 +33,7 @@ int main() {
             return -1;
         }
 
-        Logger::info("Starting 58AI Program... \n"
+        LOGGER_INFO("Starting 58AI Program... \n"
                      "===============================================\n"
                      "         ███████╗ █████╗  █████╗ ██╗\n"
                      "         ██╔════╝██╔══██╗██╔══██╗██║\n"
@@ -44,9 +44,9 @@ int main() {
                      "===============================================\n");
 
         // 程序初始化完成，现在等待退出信号
-        Logger::info("==========================================");
-        Logger::info("Application is running. Press Ctrl+C to shutdown gracefully.");
-        Logger::info("==========================================");
+        LOGGER_INFO("==========================================");
+        LOGGER_INFO("Application is running. Press Ctrl+C to shutdown gracefully.");
+        LOGGER_INFO("==========================================");
 
         // 阻塞主线程，等待退出信号
         {
@@ -55,21 +55,21 @@ int main() {
         }
 
         // 收到退出信号，开始关闭程序
-        Logger::info("Shutdown signal received, cleaning up...");
+        LOGGER_INFO("Shutdown signal received, cleaning up...");
 
         // ApplicationManager的析构函数会自动调用shutdown()
         // 但我们可以显式调用以确保有序关闭
         appManager.shutdown();
 
-        Logger::info("Application shutdown completed successfully.");
+        LOGGER_INFO("Application shutdown completed successfully.");
         return 0;
     } catch (const std::exception& e) {
         std::cerr << "Fatal error occurred during program execution: " << e.what() << std::endl;
-        Logger::get_instance().fatal(std::string("Fatal program error: ") + e.what());
+        LOGGER_FATAL(std::string("Fatal program error: ") + e.what());
         return -1;
     } catch (...) {
         std::cerr << "Unknown fatal error occurred during program execution" << std::endl;
-        Logger::get_instance().fatal("Unknown fatal program error");
+        LOGGER_FATAL("Unknown fatal program error");
         return -1;
     }
 }

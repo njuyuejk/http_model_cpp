@@ -11,14 +11,7 @@
 #include <dirent.h>
 #include <atomic>
 
-#ifdef ERROR
-#undef ERROR
-#endif
-
-/**
- * @brief 日志级别枚举
- */
-enum LogLevel {
+enum class LogLevel {
     DEBUG,
     INFO,
     WARNING,
@@ -26,138 +19,65 @@ enum LogLevel {
     FATAL
 };
 
-/**
- * @brief 日志管理类
- * 提供日志记录和管理功能
- */
 class Logger {
 public:
-    /**
-     * @brief 初始化日志系统
-     * @param logToFile 是否记录到文件
-     * @param logDir 日志文件目录
-     * @param minLevel 最小记录日志级别
-     */
+    // 初始化日志系统
     static void init(bool logToFile = false, const std::string& logDir = "logs", LogLevel minLevel = LogLevel::INFO);
 
-    /**
-     * @brief 关闭日志系统
-     */
+    // 关闭日志系统
     static void shutdown();
 
-    /**
-     * @brief 第一阶段：准备关闭
-     */
+    // 第一阶段：准备关闭
     static void prepareShutdown();
 
-    /**
-     * @brief 第二阶段：最终关闭
-     */
+    // 第二阶段：最终关闭
     static void finalizeShutdown();
 
-    /**
-     * @brief 关闭过程中的日志
-     * @param message 日志消息
-     */
+    // 关闭过程中的日志
     static void shutdownMessage(const std::string& message);
 
-    /**
-     * @brief 记录调试级别日志
-     * @param message 日志消息
-     */
+    // 原有的日志方法（保持不变）
     static void debug(const std::string& message);
-
-    /**
-     * @brief 记录信息级别日志
-     * @param message 日志消息
-     */
     static void info(const std::string& message);
-
-    /**
-     * @brief 记录警告级别日志
-     * @param message 日志消息
-     */
     static void warning(const std::string& message);
-
-    /**
-     * @brief 记录错误级别日志
-     * @param message 日志消息
-     */
     static void error(const std::string& message);
-
-    /**
-     * @brief 记录致命错误级别日志
-     * @param message 日志消息
-     */
     static void fatal(const std::string& message);
 
-    /**
-     * @brief 获取Logger单例实例
-     * @return Logger实例引用
-     */
-    static Logger& get_instance() {
-        static Logger instance;
-        return instance;
-    }
-
-    /**
-     * @brief 日志记录方法
-     * @param message 日志消息
-     * @param level 日志级别
-     */
-    void log(const std::string& message, LogLevel level = LogLevel::INFO) {
-        Logger::log(level, message);
-    }
+    // 新增：带位置信息的日志方法
+    static void debugWithLocation(const std::string& message, const char* file, int line, const char* function);
+    static void infoWithLocation(const std::string& message, const char* file, int line, const char* function);
+    static void warningWithLocation(const std::string& message, const char* file, int line, const char* function);
+    static void errorWithLocation(const std::string& message, const char* file, int line, const char* function);
+    static void fatalWithLocation(const std::string& message, const char* file, int line, const char* function);
 
 private:
-    /**
-     * @brief 记录日志的主要方法
-     * @param level 日志级别
-     * @param message 日志消息
-     */
+    // 记录日志的主要方法
     static void log(LogLevel level, const std::string& message);
 
-    /**
-     * @brief 获取当前日期的日志文件路径
-     * @return 日志文件路径
-     */
+    // 新增：带位置信息的日志记录方法
+    static void logWithLocation(LogLevel level, const std::string& message,
+                                const char* file, int line, const char* function);
+
+    // 获取当前日期的日志文件路径
     static std::string getCurrentLogFilePath();
 
-    /**
-     * @brief 检查并清理旧的日志文件
-     */
+    // 检查并清理旧的日志文件
     static void cleanupOldLogs();
 
-    /**
-     * @brief 检查并切换日志文件（如果需要）
-     */
+    // 检查并切换日志文件（如果需要）
     static void checkAndRotateLogFile();
 
-    /**
-     * @brief 创建目录（如果不存在）
-     * @param path 目录路径
-     * @return 成功创建返回true
-     */
+    // 创建目录（如果不存在）
     static bool createDirectory(const std::string& path);
 
-    /**
-     * @brief 检查文件是否存在
-     * @param filename 文件名
-     * @return 文件存在返回true
-     */
+    // 检查文件是否存在
     static bool fileExists(const std::string& filename);
 
-    /**
-     * @brief 获取目录中的所有文件
-     * @param directory 目录路径
-     * @return 文件路径列表
-     */
+    // 获取目录中的所有文件
     static std::vector<std::string> getFilesInDirectory(const std::string& directory);
 
-    // 禁止外部构造和拷贝
-    Logger() = default;
-    Logger(const Logger&) = delete;
-    Logger& operator=(const Logger&) = delete;
+    // 提取文件名（去除路径）
+    static std::string extractFilename(const char* filepath);
 
     // 使用原子变量避免竞态条件
     static std::atomic<bool> isShuttingDown;
@@ -173,5 +93,96 @@ private:
     static std::string currentLogDate;
     static const int MAX_LOG_DAYS = 30;
 };
+
+// 带位置信息的日志宏定义（使用安全的前缀避免与OpenCV冲突）
+#define LOGGER_DEBUG(msg) \
+    Logger::debugWithLocation(msg, __FILE__, __LINE__, __FUNCTION__)
+
+#define LOGGER_INFO(msg) \
+    Logger::infoWithLocation(msg, __FILE__, __LINE__, __FUNCTION__)
+
+#define LOGGER_WARNING(msg) \
+    Logger::warningWithLocation(msg, __FILE__, __LINE__, __FUNCTION__)
+
+#define LOGGER_ERROR(msg) \
+    Logger::errorWithLocation(msg, __FILE__, __LINE__, __FUNCTION__)
+
+#define LOGGER_FATAL(msg) \
+    Logger::fatalWithLocation(msg, __FILE__, __LINE__, __FUNCTION__)
+
+// 支持格式化字符串的宏（需要C++20或使用sprintf）
+#define LOGGER_DEBUG_FMT(fmt, ...) do { \
+    char buffer[1024]; \
+    snprintf(buffer, sizeof(buffer), fmt, ##__VA_ARGS__); \
+    Logger::debugWithLocation(std::string(buffer), __FILE__, __LINE__, __FUNCTION__); \
+} while(0)
+
+#define LOGGER_INFO_FMT(fmt, ...) do { \
+    char buffer[1024]; \
+    snprintf(buffer, sizeof(buffer), fmt, ##__VA_ARGS__); \
+    Logger::infoWithLocation(std::string(buffer), __FILE__, __LINE__, __FUNCTION__); \
+} while(0)
+
+#define LOGGER_WARNING_FMT(fmt, ...) do { \
+    char buffer[1024]; \
+    snprintf(buffer, sizeof(buffer), fmt, ##__VA_ARGS__); \
+    Logger::warningWithLocation(std::string(buffer), __FILE__, __LINE__, __FUNCTION__); \
+} while(0)
+
+#define LOGGER_ERROR_FMT(fmt, ...) do { \
+    char buffer[1024]; \
+    snprintf(buffer, sizeof(buffer), fmt, ##__VA_ARGS__); \
+    Logger::errorWithLocation(std::string(buffer), __FILE__, __LINE__, __FUNCTION__); \
+} while(0)
+
+#define LOGGER_FATAL_FMT(fmt, ...) do { \
+    char buffer[1024]; \
+    snprintf(buffer, sizeof(buffer), fmt, ##__VA_ARGS__); \
+    Logger::fatalWithLocation(std::string(buffer), __FILE__, __LINE__, __FUNCTION__); \
+} while(0)
+
+// 条件日志宏
+#define LOGGER_DEBUG_IF(condition, msg) \
+    do { if (condition) LOGGER_DEBUG(msg); } while(0)
+
+#define LOGGER_INFO_IF(condition, msg) \
+    do { if (condition) LOGGER_INFO(msg); } while(0)
+
+#define LOGGER_WARNING_IF(condition, msg) \
+    do { if (condition) LOGGER_WARNING(msg); } while(0)
+
+#define LOGGER_ERROR_IF(condition, msg) \
+    do { if (condition) LOGGER_ERROR(msg); } while(0)
+
+#define LOGGER_FATAL_IF(condition, msg) \
+    do { if (condition) LOGGER_FATAL(msg); } while(0)
+
+// 便捷的进入/退出函数日志宏
+#define LOGGER_FUNCTION_ENTER() \
+    LOGGER_DEBUG("Function entered")
+
+#define LOGGER_FUNCTION_EXIT() \
+    LOGGER_DEBUG("Function exited")
+
+// RAII风格的函数跟踪
+class FunctionTracker {
+public:
+    FunctionTracker(const char* file, int line, const char* function)
+            : file_(file), line_(line), function_(function) {
+        Logger::debugWithLocation("Function entered", file_, line_, function_);
+    }
+
+    ~FunctionTracker() {
+        Logger::debugWithLocation("Function exited", file_, line_, function_);
+    }
+
+private:
+    const char* file_;
+    int line_;
+    const char* function_;
+};
+
+#define LOGGER_FUNCTION_TRACE() \
+    FunctionTracker __func_tracker(__FILE__, __LINE__, __FUNCTION__)
 
 #endif // LOGGER_H

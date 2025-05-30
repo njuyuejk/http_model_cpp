@@ -21,7 +21,7 @@ grpc::Status StatusServiceImpl::GetSystemStatus(
     auto start_time = std::chrono::high_resolution_clock::now();
 
     try {
-        Logger::info("Received gRPC GetSystemStatus request, thread: " +
+        LOGGER_INFO("Received gRPC GetSystemStatus request, thread: " +
                      std::to_string(std::hash<std::thread::id>{}(requestId)));
 
         response->set_success(true);
@@ -58,14 +58,14 @@ grpc::Status StatusServiceImpl::GetSystemStatus(
         auto end_time = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
 
-        Logger::info("gRPC GetSystemStatus completed successfully, time: " +
+        LOGGER_INFO("gRPC GetSystemStatus completed successfully, time: " +
                      std::to_string(duration.count()) + "ms, thread: " +
                      std::to_string(std::hash<std::thread::id>{}(requestId)));
 
         return grpc::Status::OK;
 
     } catch (const std::exception& e) {
-        Logger::error("gRPC GetSystemStatus error: " + std::string(e.what()) +
+        LOGGER_ERROR("gRPC GetSystemStatus error: " + std::string(e.what()) +
                       ", thread: " + std::to_string(std::hash<std::thread::id>{}(requestId)));
         response->set_success(false);
         response->set_message("Internal error: " + std::string(e.what()));
@@ -81,7 +81,7 @@ grpc::Status StatusServiceImpl::GetModelPoolsStatus(
     auto requestId = std::this_thread::get_id();
 
     try {
-        Logger::info("Received gRPC GetModelPoolsStatus request, thread: " +
+        LOGGER_INFO("Received gRPC GetModelPoolsStatus request, thread: " +
                      std::to_string(std::hash<std::thread::id>{}(requestId)));
 
         response->set_success(true);
@@ -110,13 +110,13 @@ grpc::Status StatusServiceImpl::GetModelPoolsStatus(
             }
         }
 
-        Logger::info("gRPC GetModelPoolsStatus completed successfully, thread: " +
+        LOGGER_INFO("gRPC GetModelPoolsStatus completed successfully, thread: " +
                      std::to_string(std::hash<std::thread::id>{}(requestId)));
 
         return grpc::Status::OK;
 
     } catch (const std::exception& e) {
-        Logger::error("gRPC GetModelPoolsStatus error: " + std::string(e.what()) +
+        LOGGER_ERROR("gRPC GetModelPoolsStatus error: " + std::string(e.what()) +
                       ", thread: " + std::to_string(std::hash<std::thread::id>{}(requestId)));
         response->set_success(false);
         response->set_message("Internal error: " + std::string(e.what()));
@@ -132,7 +132,7 @@ grpc::Status StatusServiceImpl::GetConcurrencyStats(
     auto requestId = std::this_thread::get_id();
 
     try {
-        Logger::info("Received gRPC GetConcurrencyStats request, thread: " +
+        LOGGER_INFO("Received gRPC GetConcurrencyStats request, thread: " +
                      std::to_string(std::hash<std::thread::id>{}(requestId)));
 
         response->set_success(true);
@@ -157,13 +157,13 @@ grpc::Status StatusServiceImpl::GetConcurrencyStats(
         }
         response->set_overall_failure_rate(overallFailureRate);
 
-        Logger::info("gRPC GetConcurrencyStats completed successfully, thread: " +
+        LOGGER_INFO("gRPC GetConcurrencyStats completed successfully, thread: " +
                      std::to_string(std::hash<std::thread::id>{}(requestId)));
 
         return grpc::Status::OK;
 
     } catch (const std::exception& e) {
-        Logger::error("gRPC GetConcurrencyStats error: " + std::string(e.what()) +
+        LOGGER_ERROR("gRPC GetConcurrencyStats error: " + std::string(e.what()) +
                       ", thread: " + std::to_string(std::hash<std::thread::id>{}(requestId)));
         response->set_success(false);
         response->set_message("Internal error: " + std::string(e.what()));

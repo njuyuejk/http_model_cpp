@@ -122,6 +122,9 @@ public:
                                const cv::Mat& imageData,
                                std::vector<std::vector<std::any>>& results,
                                std::vector<std::string>& plateResults,
+                               double startValue,
+                               double endValue,
+                               double& targetResult,
                                int timeoutMs = 0);
 
     /**

@@ -9,14 +9,14 @@ bool ModelPool::initialize(const std::string& modelPath, int modelType, float th
     std::unique_lock<std::mutex> lock(poolMutex_);
 
     if (!availableModels_.empty()) {
-        Logger::warning("Model pool already initialized for type: " + std::to_string(modelType));
+        LOGGER_WARNING("Model pool already initialized for type: " + std::to_string(modelType));
         return false;
     }
 
     // 验证模型文件存在
     std::ifstream modelFile(modelPath);
     if (!modelFile.good()) {
-        Logger::error("Model file does not exist: " + modelPath);
+        LOGGER_ERROR("Model file does not exist: " + modelPath);
         return false;
     }
     modelFile.close();
@@ -25,7 +25,7 @@ bool ModelPool::initialize(const std::string& modelPath, int modelType, float th
     modelType_ = modelType;
     threshold_ = threshold;
 
-    Logger::info("Initializing model pool for type " + std::to_string(modelType) +
+    LOGGER_INFO("Initializing model pool for type " + std::to_string(modelType) +
                  " with " + std::to_string(maxPoolSize_) + " instances");
 
     // 创建模型实例池
@@ -41,10 +41,10 @@ bool ModelPool::initialize(const std::string& modelPath, int modelType, float th
             availableModels_.push(model);
             allModels_.insert(model);
 
-            Logger::debug("Created model instance " + std::to_string(i) + " for type " + std::to_string(modelType));
+            LOGGER_DEBUG("Created model instance " + std::to_string(i) + " for type " + std::to_string(modelType));
 
         } catch (const std::exception& e) {
-            Logger::error("Failed to create model instance " + std::to_string(i) +
+            LOGGER_ERROR("Failed to create model instance " + std::to_string(i) +
                           " for type " + std::to_string(modelType) + ": " + e.what());
 
             // 清理已创建的实例
@@ -57,7 +57,7 @@ bool ModelPool::initialize(const std::string& modelPath, int modelType, float th
     }
 
     enabled_.store(true);
-    Logger::info("Model pool initialized successfully for type " + std::to_string(modelType) +
+    LOGGER_INFO("Model pool initialized successfully for type " + std::to_string(modelType) +
                  " with " + std::to_string(maxPoolSize_) + " instances");
     return true;
 }
@@ -66,7 +66,7 @@ std::shared_ptr<rknn_lite> ModelPool::acquireModel(int timeoutMs) {
     totalAcquires_++;
 
     if (!enabled_.load() || shutdown_.load()) {
-        Logger::debug("Model pool disabled or shutdown for type: " + std::to_string(modelType_));
+        LOGGER_DEBUG("Model pool disabled or shutdown for type: " + std::to_string(modelType_));
         return nullptr;
     }
 
@@ -79,7 +79,7 @@ std::shared_ptr<rknn_lite> ModelPool::acquireModel(int timeoutMs) {
         return !availableModels_.empty() || shutdown_.load();
     })) {
         timeoutCount_++;
-        Logger::warning("Model acquisition timeout after " + std::to_string(timeoutMs) +
+        LOGGER_WARNING("Model acquisition timeout after " + std::to_string(timeoutMs) +
                         "ms for type: " + std::to_string(modelType_));
         return nullptr;
     }
@@ -91,7 +91,7 @@ std::shared_ptr<rknn_lite> ModelPool::acquireModel(int timeoutMs) {
     auto model = availableModels_.front();
     availableModels_.pop();
 
-    Logger::debug("Acquired model for type " + std::to_string(modelType_) +
+    LOGGER_DEBUG("Acquired model for type " + std::to_string(modelType_) +
                   ", remaining available: " + std::to_string(availableModels_.size()));
 
     return model;
@@ -106,7 +106,7 @@ void ModelPool::releaseModel(std::shared_ptr<rknn_lite> model) {
 
     // 验证这个模型确实属于这个池
     if (allModels_.find(model) == allModels_.end()) {
-        Logger::error("Attempt to release model that doesn't belong to pool type: " +
+        LOGGER_ERROR("Attempt to release model that doesn't belong to pool type: " +
                       std::to_string(modelType_));
         return;
     }
@@ -117,7 +117,7 @@ void ModelPool::releaseModel(std::shared_ptr<rknn_lite> model) {
     availableModels_.push(model);
     condition_.notify_one();
 
-    Logger::debug("Released model for type " + std::to_string(modelType_) +
+    LOGGER_DEBUG("Released model for type " + std::to_string(modelType_) +
                   ", available: " + std::to_string(availableModels_.size()));
 }
 
@@ -139,7 +139,7 @@ ModelPool::PoolStatus ModelPool::getStatus() const {
 void ModelPool::setEnabled(bool enabled) {
     bool oldValue = enabled_.exchange(enabled);
     if (oldValue != enabled) {
-        Logger::info("Model pool for type " + std::to_string(modelType_) +
+        LOGGER_INFO("Model pool for type " + std::to_string(modelType_) +
                      " status changed to: " + (enabled ? "enabled" : "disabled"));
 
         if (enabled) {
@@ -155,7 +155,7 @@ void ModelPool::shutdown() {
         return; // 已经关闭
     }
 
-    Logger::info("Shutting down model pool for type: " + std::to_string(modelType_));
+    LOGGER_INFO("Shutting down model pool for type: " + std::to_string(modelType_));
 
     std::unique_lock<std::mutex> lock(poolMutex_);
     condition_.notify_all();
@@ -166,7 +166,7 @@ void ModelPool::shutdown() {
     }
     allModels_.clear();
 
-    Logger::info("Model pool shutdown completed for type: " + std::to_string(modelType_) +
+    LOGGER_INFO("Model pool shutdown completed for type: " + std::to_string(modelType_) +
                  ", total acquires: " + std::to_string(totalAcquires_.load()) +
                  ", total releases: " + std::to_string(totalReleases_.load()) +
                  ", timeouts: " + std::to_string(timeoutCount_.load()));

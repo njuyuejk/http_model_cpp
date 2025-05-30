@@ -19,7 +19,7 @@ StatusServiceInitializer::~StatusServiceInitializer() {
 
 bool StatusServiceInitializer::initialize(GrpcServer* server) {
     if (!server) {
-        Logger::error("Cannot initialize status service: gRPC server pointer is null");
+        LOGGER_ERROR("Cannot initialize status service: gRPC server pointer is null");
         return false;
     }
 
@@ -31,16 +31,16 @@ bool StatusServiceInitializer::initialize(GrpcServer* server) {
         bool result = server->registerService(serviceImpl_);
 
         if (!result) {
-            Logger::error("Unable to register status service to gRPC server");
+            LOGGER_ERROR("Unable to register status service to gRPC server");
             serviceImpl_.reset();
             return false;
         }
 
-        Logger::info("Status service successfully registered to gRPC server");
+        LOGGER_INFO("Status service successfully registered to gRPC server");
         return true;
     }
     catch (const std::exception& e) {
-        Logger::error("Exception occurred while initializing status service: " + std::string(e.what()));
+        LOGGER_ERROR("Exception occurred while initializing status service: " + std::string(e.what()));
         serviceImpl_.reset();
         return false;
     }
